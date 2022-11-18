@@ -1,0 +1,13 @@
+{{- if .Values.deployment.envs -}}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.name }}-configmap
+data:
+
+  {{- range .Values.deployment.envs }}
+  {{ .name }}: {{ .value }}
+  {{- end }}
+
+{{- end }}

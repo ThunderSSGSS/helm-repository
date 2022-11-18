@@ -1,0 +1,65 @@
+# Chart Auth-fastapi-2
+This chart helps you to deploy [Auth-fastapi-2](https://github.com/ThunderSSGSS/Auth-fastapi-2) on k8s.<br>**NOTE**: This chart don't provides auto-scaling for the auth-fastapi-2 microservices.
+
+### Values
+The default values
+```yaml
+namespace:
+  create: true
+  name: auth-fastapi-2 # the namespace that all resources will be created, if don't exist set create=true
+
+ingress:
+  create: true
+  host: auth.thunder-local.com
+  paths:
+    - path: / # allow access to all routes
+      pathType: Prefix
+
+# if is_test=true, will create broker and database deployments and services
+# is_test=true is used only for development (when you dont have a postgres or rabbitmq cluster)
+# if you have rabbitmq server/cluter and postgres server/cluster, you can use is_test=false
+is_test: true
+
+# Broker values
+broker:
+  hostname: broker-service
+  vhost_name: example
+  user_base64: ZXhhbXBsZQ==
+  password_base64: ZXhhbXBsZQ==
+
+# Database
+database:
+  hostname: database-service
+  database: example
+  user_base64: ZXhhbXBsZQ==
+  password_base64: ZXhhbXBsZQ==
+
+# Auth-server default values
+auth_server:
+  service_port: 80
+  replicas: 1
+  JWT_ALGORITHM: HS256
+  PRIVATE_KEY_base64: MTc1NTkyNThkM2FjMTQ1ZDcxN2RjYWZlYTMyNzdmZTgyYTNjYjVkNWJhZDAxMjk2OTI1YmRkOWEyZTBjMzM3MA==
+  PUBLIC_KEY: null
+  SECRET_KEY_base64: YTg2YTU3ZWQ0MWQ5NzIwYmQ0ODE1OTQ5MTdkYTJiY2E=
+  ACCESS_TOKEN_EXP: 20
+  REFRESH_TOKEN_EXP: 50
+  RANDOM_EXP: 10
+
+# Email-worker default values
+email_worker:
+  replicas: 1
+  WORKER_DEFAULT_QUEUE: auth_emails
+  SENDER_EMAIL_base64: ZXhhbXBsZV9zZW5kZXJAb3V0bG9vay5jb20=
+  SENDER_EMAIL_PASSWORD_base64: ZXhhbXBsZQ==
+
+# Db-worker default values
+db_worker:
+  replicas: 1
+  WORKER_DEFAULT_QUEUE: auth_db_transactions
+  ADMIN_USER_EMAIL: admin@admin.com
+```
+
+## DevInfos:
+- Name: James Artur (Thunder);
+- A DevOps and infrastructure enthusiastics.

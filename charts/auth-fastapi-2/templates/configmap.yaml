@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-fastapi-2-configmap
+  namespace: {{ .Values.namespace.name }}
+data:
+  JWT_ALGORITHM: {{ .Values.auth_server.JWT_ALGORITHM }}
+  {{- if .Values.auth_server.PUBLIC_KEY }}
+  PUBLIC_KEY: {{ .Values.auth_server.PUBLIC_KEY }}
+  {{- end }}
+  ACCESS_TOKEN_EXP: '{{ .Values.auth_server.ACCESS_TOKEN_EXP }}'
+  REFRESH_TOKEN_EXP: '{{ .Values.auth_server.REFRESH_TOKEN_EXP }}'
+  RANDOM_EXP: '{{ .Values.auth_server.RANDOM_EXP }}'
+  EMAILS_QUEUE: {{ .Values.email_worker.WORKER_DEFAULT_QUEUE }}
+  DB_TRANSACTIONS_QUEUE: {{ .Values.db_worker.WORKER_DEFAULT_QUEUE }}
+  ADMIN_USER_EMAIL: {{ .Values.db_worker.ADMIN_USER_EMAIL }}
+
+{{- if .Values.is_test }}
+  RABBITMQ_VHOST: {{ .Values.broker.vhost_name }}
+  DATABASE_NAME: {{ .Values.database.database }}
+{{- end }}

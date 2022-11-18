@@ -1,0 +1,258 @@
+{{- if .Values.is_test }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database-deployment
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: database
+        image: postgres:14.2-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: DATABASE_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: DATABASE_PASS
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: DATABASE_NAME
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: broker-deployment
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: broker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: broker
+  template:
+    metadata:
+      labels:
+        app: broker
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: broker
+        image: rabbitmq:3.9.13-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5672
+          name: amqp
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: RABBITMQ_USER
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: RABBITMQ_PASS
+        - name: RABBITMQ_DEFAULT_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: RABBITMQ_VHOST
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-server-deployment
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: auth-server
+spec:
+  replicas: {{ .Values.auth_server.replicas }}
+  selector:
+    matchLabels:
+      app: auth-server
+  template:
+    metadata:
+      labels:
+        app: auth-server
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: auth-server
+        image: thunderssgss/auth-server:{{ .Chart.AppVersion }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: DATABASE_URI
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: DATABASE_URI
+        - name: RABBITMQ_URI
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: RABBITMQ_URI
+        - name: EMAILS_QUEUE
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: EMAILS_QUEUE
+        - name: DB_TRANSACTIONS_QUEUE
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: DB_TRANSACTIONS_QUEUE
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: JWT_ALGORITHM
+        - name: PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: PRIVATE_KEY
+        {{- if .Values.auth_server.PUBLIC_KEY }}
+        - name: PUBLIC_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: PUBLIC_KEY
+        {{- end }}
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: SECRET_KEY
+        - name: ACCESS_TOKEN_EXP
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: ACCESS_TOKEN_EXP
+        - name: REFRESH_TOKEN_EXP
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: REFRESH_TOKEN_EXP
+        - name: RANDOM_EXP
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: RANDOM_EXP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-worker-deployment
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: email-worker
+spec:
+  replicas: {{ .Values.email_worker.replicas }}
+  selector:
+    matchLabels:
+      app: email-worker
+  template:
+    metadata:
+      labels:
+        app: email-worker
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: email-worker
+        image: thunderssgss/email-worker:{{ .Chart.AppVersion }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: RABBITMQ_URI
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: RABBITMQ_URI
+        - name: WORKER_DEFAULT_QUEUE
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: EMAILS_QUEUE
+        - name: SENDER_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: SENDER_EMAIL
+        - name: SENDER_EMAIL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: SENDER_EMAIL_PASSWORD
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-worker-deployment
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: db-worker
+spec:
+  replicas: {{ .Values.db_worker.replicas }}
+  selector:
+    matchLabels:
+      app: db-worker
+  template:
+    metadata:
+      labels:
+        app: db-worker
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: db-worker
+        image: thunderssgss/db-worker:{{ .Chart.AppVersion }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: RABBITMQ_URI
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: RABBITMQ_URI
+        - name: WORKER_DEFAULT_QUEUE
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: DB_TRANSACTIONS_QUEUE
+        - name: DATABASE_URI
+          valueFrom:
+            secretKeyRef:
+              name: auth-fastapi-2-secret
+              key: DATABASE_URI
+        - name: ADMIN_USER_EMAIL
+          valueFrom:
+            configMapKeyRef:
+              name: auth-fastapi-2-configmap
+              key: ADMIN_USER_EMAIL
