@@ -1,6 +1,6 @@
 apiVersion: v2
 name: base-app
-description: A Helm chart for Kubernetes
+description: Helps you to deploy stateless applications on k8s
 
 # A chart can be either an 'application' or a 'library' chart.
 #

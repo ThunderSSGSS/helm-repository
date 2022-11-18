@@ -3,9 +3,9 @@ entries:
   auth-fastapi-2:
   - apiVersion: v2
     appVersion: v0.4.0
-    created: "2022-11-18T14:31:33.188930737+02:00"
-    description: A Helm chart for Kubernetes
-    digest: 02eaa42c8252f965defab6ec9da4afa37d65919ab99a208c8e62630cfddbd6f9
+    created: "2022-11-18T14:42:02.704105093+02:00"
+    description: Helps you to deploy Auth-fastapi-2 on k8s
+    digest: b8086de2c0cde87cff85d621359c71f11e16bd83d9969463faee7818eaec91fa
     name: auth-fastapi-2
     type: application
     urls:
@@ -14,12 +14,12 @@ entries:
   base-app:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2022-11-18T14:31:33.189559297+02:00"
-    description: A Helm chart for Kubernetes
-    digest: 67889a187498aa7bd03b25f2eb5b42e93fb01f6694415f373c6951f3c83a31f5
+    created: "2022-11-18T14:42:02.705041571+02:00"
+    description: Helps you to deploy stateless applications on k8s
+    digest: 40db80f0c744bcd3135b78a37b22681cef92db74910dca22bbbeb7bb0034c3ee
     name: base-app
     type: application
     urls:
     - https://thunderssgss.github.io/helm-repository/base-app-0.1.0.tgz
     version: 0.1.0
-generated: "2022-11-18T14:31:33.187741209+02:00"
+generated: "2022-11-18T14:42:02.702508812+02:00"
