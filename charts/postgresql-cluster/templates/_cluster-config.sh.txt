@@ -1,0 +1,31 @@
+echo "LOG: Check the primary"
+export PGPASSWORD=${POSTGRES_PASSWORD}
+
+echo "LOG: Creating Databases and configure database"
+
+echo "
+alter system set max_connections = {{ .Values.max_connections }};
+
+{{- range .Values.databases }}
+create database {{ .name }};
+
+{{- if and .admin_user .admin_user_pwd }}
+create user {{ .admin_user }} with encrypted password '{{ .admin_user_pwd }}';
+grant all privileges on database {{ .name }} to {{ .admin_user }};
+alter user {{ .admin_user }} with encrypted password '{{ .admin_user_pwd }}';
+{{- end }}
+{{- end }}" > databases.sql
+    
+export result="1"
+while (($result != 0))
+do
+    sleep 4s
+    psql -d postgres -U ${POSTGRES_USER} -h ${MASTER_HOST} -f databases.sql
+    export result=$?
+    echo "$result"
+done
+
+rm databases.sql
+
+
+echo "LOG: READY"

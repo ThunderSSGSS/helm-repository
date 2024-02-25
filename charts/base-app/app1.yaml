@@ -1,0 +1,32 @@
+name: app1
+
+# EXTERNAL ACCESS
+ingress:
+  create: true
+  host: host.com
+  enable_tls: true
+
+# RESOURCES
+deployment:
+  replicas: 1
+  image: nginx
+  tag: 1.21.6-alpine
+  pullPolicy: IfNotPresent
+  # ENVIRONMENT VARIABLES
+  envs:
+    JORNAL_HOST: jornal.jornal-env
+
+# INTERNAL NETWORK POLICIES
+upstreams:
+- label: app
+  label_value: app2
+  namespace: jornal-env
+  containerPort: 80
+  protocol: TCP 
+
+# EXTERNAL NETWORK POLICIES
+external_upstreams:
+- host: google.com
+  protocol: TCP
+  ips: ["172.253.116.102"]
+  port: 80

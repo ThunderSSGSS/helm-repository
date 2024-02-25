@@ -1,0 +1,97 @@
+{{- $root := . }}
+#________________________STATEFULSET________________________#
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+spec:
+  replicas: {{ .Values.cluster.nodes }}
+  serviceName: "{{ .Values.name }}-{{ .Values.name_suffix }}"
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}-{{ .Values.name_suffix }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}-{{ .Values.name_suffix }}
+      annotations:
+        checksum/config: {{ printf "%s" (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum }}
+    spec:
+      containers:
+      - name: {{ .Values.name }}-{{ .Values.name_suffix }}
+        image: quay.io/minio/minio:{{ .Values.imageTag }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        args: 
+        - "server"
+        - "--console-address"
+        - ":9090"
+        {{- if gt (int .Values.cluster.nodes) 1 }}
+          {{- range $index := (untilStep 0 (int .Values.cluster.nodes) 1) }}
+        - "http://{{ $root.Values.name }}-{{ $root.Values.name_suffix }}-{{ $index }}.{{ $root.Values.name }}-{{ $root.Values.name_suffix }}.{{ $root.Release.Namespace }}:9000/data/files"
+          {{- end }}
+        {{- else }}
+        - "http://{{ .Values.name }}-{{ .Values.name_suffix }}-0.{{ .Values.name }}-{{ .Values.name_suffix }}.{{ .Release.Namespace }}:9000/data/files"
+        {{- end }}
+
+        ##__volumen_mount__##
+        {{- if .Values.storage.enable }}
+        volumeMounts:
+        - name: {{ .Values.name }}-{{ .Values.name_suffix }}-data
+          mountPath: /data
+        {{- end }}
+
+        #########__PORTS__############
+        ports:
+        - name: {{ .Values.name_suffix }}-api
+          containerPort: 9000
+        - name: {{ .Values.name_suffix }}-console
+          containerPort: 9090
+
+        {{- if .Values.resources.enable }}
+        ##____RESOURCES____##
+        resources:
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+            memory: {{ .Values.resources.limits.memory }}
+        {{- end }}
+
+        ##########__ENVS__############
+        env:
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            secretKeyRef: 
+              name: {{ .Values.name }}-{{ .Values.name_suffix }}
+              key: MINIO_ROOT_USER
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.name }}-{{ .Values.name_suffix }}
+              key: MINIO_ROOT_PASSWORD
+        - name: MINIO_SERVER_URL
+          valueFrom:
+            secretKeyRef: 
+              name: {{ .Values.name }}-{{ .Values.name_suffix }}
+              key: MINIO_SERVER_URL
+        - name: MINIO_BROWSER_REDIRECT_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.name }}-{{ .Values.name_suffix }}
+              key: MINIO_BROWSER_REDIRECT_URL
+  
+  {{- if .Values.storage.enable }}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ .Values.name }}-{{ .Values.name_suffix }}-data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: {{ .Values.storage.storageClassName }} 
+      resources:
+        requests:
+          storage: {{ .Values.storage.capacity }} 
+  {{- end }}

@@ -1,0 +1,97 @@
+##______________________MASTER_NODE_SERVICE________________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+spec:
+  {{- if .Values.service.add_node_port }}
+  type: LoadBalancer
+  {{- else }}
+  type: ClusterIP
+  {{- end }}
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: master
+  ports:
+  - name: {{ .Values.name_suffix }}-port
+    protocol: TCP
+    port: 5432
+    targetPort: 5432
+    {{- if .Values.service.add_node_port }}
+    nodePort: {{ .Values.service.nodePort }}
+    {{- end }}
+
+
+{{- if .Values.cluster_mode.enable }}
+---
+##______________________READ_REPLICAS_SERVICE________________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-read
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: read
+spec:
+  clusterIP: None
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: read
+  ports:
+  - name: {{ .Values.name_suffix }}-port
+    protocol: TCP
+    port: 5432
+    targetPort: 5432
+
+---
+##_________________________PGPOOL_SERVICE________________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-pgpool
+spec:
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: pgpool
+  ports:
+  - name: pgpool
+    protocol: TCP
+    port: 5432
+    targetPort: 5432
+
+---
+
+##_________________________NEW_PGPOOL_SERVICE________________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-proxy
+spec:
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: pgpool
+  ports:
+  - name: pgpool
+    protocol: TCP
+    port: 5432
+    targetPort: 5432
+
+{{- end }}
+
+{{- if .Values.pgadmin.enable }}
+---
+##_________________________PG_ADMIN_SERVICE________________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-pgadmin
+spec:
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: pgadmin
+  ports:
+  - name: pgadmin
+    protocol: TCP
+    port: 80
+    targetPort: 80
+{{- end }}

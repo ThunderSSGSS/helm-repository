@@ -1,19 +1,41 @@
-{{- if .Values.service.create -}}
+{{- $root := . }}
+{{- if .Values.deployment.ports -}}
+{{- $node_port_enabled := false }}
 
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.name }}-service
+  name: {{ .Values.name }}
 spec:
-  selector:
+  selector: 
     app: {{ .Values.name }}
   ports:
-  {{- range .Values.service.ports }}
+  {{- range .Values.deployment.ports }}
   - name: {{ .name }}
     protocol: {{ .protocol }}
-    port: {{ .port }}
-    targetPort: {{ .targetPort }}
+    port: {{ .servicePort }}
+    targetPort: {{ .containerPort }}
+    
+    {{- if .nodePort }}
+    nodePort: {{ .nodePort }}
+
+  {{- if not $node_port_enabled }}
+  type: LoadBalancer
+  {{- $node_port_enabled := true }}
   {{- end }}
 
+    {{- end }}
+  {{- end }}
+
+{{- if and .Values.ingress.create .Values.ingress.errorPage.enable }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-error
+spec:
+  type: ExternalName
+  externalName: {{ .Values.ingress.errorPage.host }}
 {{- end }}
-  
+
+{{- end }}

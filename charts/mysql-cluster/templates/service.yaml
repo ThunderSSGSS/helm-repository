@@ -1,0 +1,79 @@
+##______________________MASTER_NODE_SERVICE________________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+spec:
+  {{- if .Values.service.add_node_port }}
+  type: LoadBalancer
+  {{- else }}
+  type: ClusterIP
+  {{- end }}
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: master
+  ports:
+  - name: {{ .Values.name_suffix }}-port
+    protocol: TCP
+    port: 3306
+    targetPort: 3306
+    {{- if .Values.service.add_node_port }}
+    nodePort: {{ .Values.service.nodePort }}
+    {{- end }}
+
+
+{{- if .Values.cluster_mode.enable }}
+---
+##______________________READ_REPLICAS_SERVICE________________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-read
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: read
+spec:
+  clusterIP: None
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: read
+  ports:
+  - name: {{ .Values.name_suffix }}-port
+    protocol: TCP
+    port: 3306
+    targetPort: 3306
+
+
+---
+##_________________________PROXYSQL_SERVICE________________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-proxysql
+spec:
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: proxysql
+  ports:
+  - name: proxysql
+    protocol: TCP
+    port: 3306
+    targetPort: 3306
+
+---
+###__________________________NEW_PROXYSQL_SERVICE_______________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-proxy
+spec:
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: proxysql
+  ports:
+  - name: proxysql
+    protocol: TCP
+    port: 3306
+    targetPort: 3306
+
+{{- end }}

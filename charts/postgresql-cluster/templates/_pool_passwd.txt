@@ -1,0 +1,6 @@
+{{ .Values.root_user }}:{{ .Values.root_user_pwd }}
+{{- range .Values.databases }}
+{{- if and .admin_user .admin_user_pwd }}
+{{ .admin_user }}:{{ .admin_user_pwd }}
+{{- end }}
+{{- end }}

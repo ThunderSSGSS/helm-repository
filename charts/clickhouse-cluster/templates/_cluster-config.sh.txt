@@ -1,0 +1,24 @@
+{{- $root := . }}
+echo "LOG: Creating Databases"
+
+echo "{{- range .Values.databases }}
+CREATE DATABASE IF NOT EXISTS {{ .name }};
+
+{{- if and .admin_user .admin_user_pwd }}
+CREATE USER IF NOT EXISTS '{{ .admin_user }}' IDENTIFIED BY '{{ .admin_user_pwd }}';
+ALTER USER '{{ .admin_user }}' IDENTIFIED BY '{{ .admin_user_pwd }}';
+GRANT ALL ON {{ .name }}.* TO '{{ .admin_user }}';
+{{- end }}
+{{- end }}" > /tmp/databases.sql
+
+export result="1"
+while (($result != 0))
+do
+    sleep 4s
+    clickhouse-client -h ${MASTER_HOST} -u ${ROOT_USER} --password ${ROOT_PASSWORD} -n < /tmp/databases.sql
+    export result=$?
+    echo "$result"
+done
+
+rm /tmp/databases.sql
+echo "LOG: READY"

@@ -1,0 +1,14 @@
+{{ if .Values.storage.enable -}}
+##______________________MASTER_VOLUME________________________________##
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-master-data-pvc
+spec:
+  storageClassName: {{ .Values.storage.storageClassName }}
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.storage.capacity }}
+{{- end }}

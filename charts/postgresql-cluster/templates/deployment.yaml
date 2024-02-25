@@ -1,0 +1,241 @@
+##______________________MASTER_NODE_DEPLOYMENT________________________________##
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}-{{ .Values.name_suffix }}
+      type: master
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}-{{ .Values.name_suffix }}
+        type: master
+      annotations:
+        {{- $config_map := include (print $.Template.BasePath "/configmap.yaml") . }}
+        {{- $secret := printf "%s%s%s" .Values.root_user .Values.root_user_pwd .Values.cluster_mode.cluster_key }}
+        checksum/config: {{ printf "%s%s" $config_map $secret | sha256sum }}
+    spec:
+      {{- if or .Values.storage.enable .Values.cluster_mode.enable }}
+      volumes:
+      {{- end }}
+      {{- if .Values.storage.enable }}
+        - name: {{ .Values.name }}-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.name }}-{{ .Values.name_suffix }}-master-data-pvc
+      {{- end }}
+      {{- if .Values.cluster_mode.enable }}
+        - name: entrypoint
+          configMap:
+            name: {{ .Values.name }}-{{ .Values.name_suffix }}
+      {{- end }}
+      
+      {{- if and .Values.cluster_mode.enable .Values.cluster_mode.schedule.enable }}
+      nodeSelector:
+        {{- with .Values.cluster_mode.schedule.dbInstancesNodeSelector }}
+        {{- toYaml . | nindent 8}}
+        {{- end }}
+      {{- end }}
+
+      containers:
+        - name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+          image: postgres:{{ .Values.version }}-alpine
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          
+          {{- if or .Values.storage.enable .Values.cluster_mode.enable }}
+          ##__volumen_mount__##
+          volumeMounts:
+          {{- end }}
+          {{- if .Values.storage.enable }}
+          - name: {{ .Values.name }}-data
+            mountPath: /var/lib/postgresql/data
+          {{- end }}
+          {{- if .Values.cluster_mode.enable }}
+          - name: entrypoint
+            mountPath: /docker-entrypoint-initdb.d/master_entrypoint.sh
+            subPath: master_entrypoint.sh
+          {{- end }}
+
+          ###_____PORTS______##
+          ports:
+          - containerPort: 5432
+            name: db-port
+          
+          {{- if .Values.resources.enable }}
+          ##____RESOURCES____##
+          resources:
+            requests:
+              cpu: {{ .Values.resources.dbInstances.requests.cpu }}
+              memory: {{ .Values.resources.dbInstances.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.dbInstances.limits.cpu }}
+              memory: {{ .Values.resources.dbInstances.limits.memory }}
+          {{- end }}
+          
+          ##___ENVIRONMENT_VARIABLES___##
+          env:
+          - name: PGDATA
+            value: "/var/lib/postgresql/data/data"
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: root_user
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: root_user_pwd
+          {{- if .Values.cluster_mode.enable }}
+          - name: POSTGRES_REPLICATION_USER
+            value: "cluster"
+          - name: POSTGRES_REPLICATION_PASSWORD
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: cluster_key
+          {{- end }}
+        
+
+{{- if .Values.pgadmin.enable }}
+---
+##_____________________________________PGADMIN_DEPLOYMENT________________________________##
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-pgadmin
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: pgadmin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}-{{ .Values.name_suffix }}
+      type: pgadmin
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}-{{ .Values.name_suffix }}
+        type: pgadmin
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      volumes:
+        - name: pgadmin-config
+          secret:
+            secretName: {{ .Values.name }}-{{ .Values.name_suffix }}
+      containers:
+        - name: {{ .Values.name }}-{{ .Values.name_suffix }}-pgadmin
+          image: dpage/pgadmin4:7.0
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+        
+          ###_____PORTS______##
+          ports:
+          - containerPort: 80
+            name: port
+          
+          volumeMounts:
+          - name: pgadmin-config
+            mountPath: /pgadmin4/servers.json
+            subPath: servers.json
+          - name: pgadmin-config
+            mountPath: /pgpass
+            subPath: pgpass
+          
+          {{- if .Values.resources.enable }}
+          ##____RESOURCES____##
+          resources:
+            requests:
+              cpu: {{ .Values.resources.pgadmin.requests.cpu }}
+              memory: {{ .Values.resources.pgadmin.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.pgadmin.limits.cpu }}
+              memory: {{ .Values.resources.pgadmin.limits.memory }}
+          {{- end }}
+          
+          ##___ENVIRONMENT_VARIABLES___##
+          env:
+          - name: PGADMIN_DEFAULT_EMAIL
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: pgadmin_user
+          - name: PGADMIN_DEFAULT_PASSWORD
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: pgadmin_pwd
+{{- end }}
+
+{{- if .Values.cluster_mode.enable }}
+---
+##_____________________________________PGPOOL-II_DEPLOYMENT________________________________##
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-proxy
+spec:
+  replicas: {{ .Values.cluster_mode.pgpoolReplicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}-{{ .Values.name_suffix }}
+      type: pgpool
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}-{{ .Values.name_suffix }}
+        type: pgpool
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      volumes:
+        - name: pgpool-config
+          secret:
+            secretName: {{ .Values.name }}-{{ .Values.name_suffix }}
+      
+      {{- if .Values.cluster_mode.schedule.enable }}
+      nodeSelector:
+        {{- with .Values.cluster_mode.schedule.pgpoolNodeSelector }}
+        {{- toYaml . | nindent 8}}
+        {{- end }}
+      {{- end }}
+
+      containers:
+        - name: {{ .Values.name }}-{{ .Values.name_suffix }}-pgpool
+          image: pgpool/pgpool:{{ .Values.cluster_mode.pgpoolTag }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          
+          ports:
+          - containerPort: 5432
+            name: pgpool
+          
+          volumeMounts:
+          - name: pgpool-config
+            mountPath: /config/pool_passwd
+            subPath: pool_passwd
+          - name: pgpool-config
+            mountPath: /config/pgpool.conf
+            subPath: pgpool.conf
+          - name: pgpool-config
+            mountPath: /config/pool_hba.conf
+            subPath: pool_hba.conf
+          
+          {{- if .Values.resources.enable }}
+          ##____RESOURCES____##
+          resources:
+            requests:
+              cpu: {{ .Values.resources.pgpool.requests.cpu }}
+              memory: {{ .Values.resources.pgpool.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.pgpool.limits.cpu }}
+              memory: {{ .Values.resources.pgpool.limits.memory }}
+          {{- end }}
+
+{{- end }}

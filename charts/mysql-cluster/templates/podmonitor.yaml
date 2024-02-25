@@ -1,0 +1,25 @@
+{{- if and .Values.metrics.enable .Values.cluster_mode.enable }}
+
+##_____________________________READ_PODS_MONITOR__________________________________________##
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-read-monitor
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: read
+    {{- with .Values.metrics.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  podMetricsEndpoints:
+  - port: metrics
+    scheme: http
+    interval: {{ .Values.metrics.scrapeInterval }}
+    path: /metrics
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}-{{ .Values.name_suffix }}
+      type: read
+
+{{- end }}

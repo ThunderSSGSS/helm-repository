@@ -1,0 +1,41 @@
+echo "LOG: Connect to server"
+export result="1"
+while (($result > 0))
+do
+    sleep 4s
+    mc alias set local $MINIO_SERVER_URL $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
+    export result=$?
+done
+
+{{- range .Values.buckets }}
+echo "LOG: Configure Bucket {{ .name }}"
+mc mb local/{{ .name }}
+
+{{- if .is_public }}
+mc policy set download local/{{ .name }}
+{{- end }}
+
+{{- if and .admin_user .admin_user_pwd }}
+
+mc admin user add local {{ .admin_user }} {{ .admin_user_pwd }}
+
+echo "LOG: Create policy"
+echo '{
+    "Version": "2012-10-17",
+    "Statement": [
+        { 
+            "Effect": "Allow", 
+            "Action" : ["s3:*"],
+            "Resource": ["arn:aws:s3:::{{ .name }}/*"]
+        }
+    ]
+}' > /tmp/rules.json
+
+mc admin policy create local {{ .name }}admin /tmp/rules.json
+mc admin policy attach local {{ .name }}admin --user {{ .admin_user }}
+
+{{- end }}
+
+{{- end }}
+
+echo "LOG: READY"

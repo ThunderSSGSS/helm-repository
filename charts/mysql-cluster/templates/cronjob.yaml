@@ -1,0 +1,94 @@
+{{- $root := . }}
+{{- $config_hash := printf "%s%s" (include (print $.Template.BasePath "/configmap.yaml") .) (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum }}
+
+{{- range .Values.databases }}
+
+{{- if .enable_backup }}
+#_______________________BACKUP_CRON_JOB_{{ .name }}___________________________#
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  {{- $name_replaced := replace "_" "-" .name }}
+  name: {{ $root.Values.name }}-{{ $root.Values.name_suffix }}-{{ $name_replaced }}-backup-job
+  labels:
+    app: {{ $root.Values.name }}-{{ $root.Values.name_suffix }}
+    type: backup
+    database: {{ .name }}
+spec:
+  concurrencyPolicy: Forbid
+  {{- if .backup_suspend }}
+  suspend: true
+  {{- else }}
+  suspend: false
+  {{- end }}
+  schedule: "{{ .backup_schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            checksum/config: {{ print $config_hash }}
+          labels:
+            app: {{ $root.Values.name }}-{{ $root.Values.name_suffix }}
+            type: backup
+            database: {{ .name }}
+        spec:
+          volumes:
+          - name: entrypoint
+            configMap:
+              name: {{ $root.Values.name }}-{{ $root.Values.name_suffix }}
+
+          containers:
+          - name: {{ $root.Values.name }}-{{ $root.Values.name_suffix }}-backup-job
+            image: thunderssgss/backup:v1
+            imagePullPolicy: {{ $root.Values.imagePullPolicy }}
+            command: ["/bin/bash", "/entrypoint.d/backup_job_entrypoint.sh"]
+            args: [""]
+          
+            ##__volumen_mount__##
+            volumeMounts:
+            - name: entrypoint
+              mountPath: /entrypoint.d/backup_job_entrypoint.sh
+              subPath: backup_job_entrypoint.sh
+            
+            ##___ENVIRONMENT_VARIABLES___##
+            env:
+            # DATABSE ENVS
+            - name: MYSQL_ROOT_USER
+              valueFrom:
+                secretKeyRef: 
+                  name: {{ $root.Values.name }}-{{ $root.Values.name_suffix }}
+                  key: root_user
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: 
+                  name: {{ $root.Values.name }}-{{ $root.Values.name_suffix }}
+                  key: root_user_pwd
+            - name: MYSQL_DATABASE
+              value: "{{ .name }}"
+            - name: MASTER_HOST
+              value: "{{ $root.Values.name }}-{{ $root.Values.name_suffix }}-master"
+
+            # AWS ENVS
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef: 
+                  name: {{ $root.Values.name }}-{{ $root.Values.name_suffix }}
+                  key: aws_access_key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: 
+                  name: {{ $root.Values.name }}-{{ $root.Values.name_suffix }}
+                  key: aws_secret_access_key
+            - name: AWS_REGION
+              value: "{{ $root.Values.backups.aws_region }}"
+            - name: BUCKET_NAME
+              value: "{{ $root.Values.backups.aws_s3_bucket_name }}"
+            - name: BUCKET_PATH
+              value: "{{ .backup_s3_bucket_path }}"
+
+          restartPolicy: OnFailure
+---
+{{- end }}
+
+{{- end }}

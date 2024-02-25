@@ -1,0 +1,5 @@
+name: repository
+
+url: "https://index.docker.io/v1/"
+user: user
+password: pass

@@ -1,0 +1,5 @@
+{{- if .Values.cluster_mode.enable -}}
+{{- .Values.name -}}-{{- .Values.name_suffix -}}-pgpool
+{{- else -}}
+{{- .Values.name }}-{{ .Values.name_suffix }}-master
+{{- end -}}:5432:postgres:{{- .Values.root_user -}}:{{- .Values.root_user_pwd }}

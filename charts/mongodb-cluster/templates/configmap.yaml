@@ -1,0 +1,106 @@
+{{- $root := . }}
+{{- $read_service := printf "%s-%s-read" .Values.name .Values.name_suffix }}
+{{- $max_replicas := .Values.cluster_mode.autoscaler.enable | ternary .Values.cluster_mode.autoscaler.maxReadReplicas .Values.cluster_mode.readReplicas }}
+
+#_____________BACKUP_JOB_ENTRYPOINT____________________________#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}
+data:
+  backup_job_entrypoint.sh: |
+    mkdir /data/backups
+    export today=$(date '+%Y-%m-%d-%H_%M_%S')
+
+    echo "LOG: Make the backup ${today}"
+    mongodump --host ${MONGO_HOST} -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} \
+    --authenticationDatabase admin --db ${MONGO_DATABASE_NAME} --out /data/backups/${today}
+    
+    if (( $? != 0 )); then exit 1; fi
+    
+    echo "LOG: Compress the backup"
+    cd /data/backups && tar czf ${today}.tar.gz ${today}
+
+    echo "LOG: Send backup ${today} to S3 bucket"
+    python3 /code/upload_file.py /data/backups/${today}.tar.gz
+
+
+{{ if .Values.cluster_mode.enable }}
+  #________________MASTER_NODE_ENTRYPOINT____________________________#
+  master_entrypoint.sh: |
+    echo "LOG: START FORK SERVER"
+{{- if .Values.resources.enable }}
+    mongod --syslog --fork --pidfilepath /data/pid.txt --wiredTigerCacheSizeGB ${MONGO_CACHE_SIZE_GB} --bind_ip 127.0.0.1
+{{- else }}
+    mongod --syslog --fork --pidfilepath /data/pid.txt --bind_ip 127.0.0.1
+{{- end }}
+    echo "LOG: GENERATING CLUSTER KEY"
+    echo "${MONGO_CLUSTER_KEY}" > /data/key && chmod 400 /data/key && chown 999:999 /data/key
+
+    echo "LOG: CREATE ROOT USER"
+    mongosh --json relaxed --eval "use admin" --eval "db.createUser({user:'${MONGO_INITDB_ROOT_USERNAME}', pwd: '${MONGO_INITDB_ROOT_PASSWORD}', roles:['userAdminAnyDatabase','root']});"
+
+    echo "LOG: TEST ROOT USER"
+    export result="1"
+    while (($result > 0))
+    do
+        sleep ${SLEEP_TIME_SECS:-"4"}s
+        export result=$(mongosh --json relaxed --eval "use admin" --eval "db.auth('${MONGO_INITDB_ROOT_USERNAME}', '${MONGO_INITDB_ROOT_PASSWORD}');" | grep "Error" | wc -l )
+        echo "$result"
+    done
+
+    echo "LOG: STOP FORK SERVER"
+    cat /data/pid.txt | xargs kill -9 
+
+    echo "LOG: READY"
+{{- if .Values.resources.enable }}
+    mongod --replSet ${MONGO_CLUSTER_REPLICASET} --auth --keyFile /data/key --wiredTigerCacheSizeGB ${MONGO_CACHE_SIZE_GB} --bind_ip 0.0.0.0
+{{- else }}
+    mongod --replSet ${MONGO_CLUSTER_REPLICASET} --auth --keyFile /data/key --bind_ip 0.0.0.0
+{{- end }}
+
+
+  #_____________READ_REPLICA_NODE_ENTRYPOINT____________________________#
+  replicas_entrypoint.sh: |
+    echo "LOG: GENERATING CLUSTER KEY"
+    echo "${MONGO_CLUSTER_KEY}" > /data/key && chmod 400 /data/key && chown 999:999 /data/key
+
+    echo "LOG: Check the primary server status"
+    export result="0"
+    while (($result == 0))
+    do
+        sleep 4s
+        export result=$( mongosh --host ${MONGO_MASTER_HOST} --eval "rs.status()" --json relaxed | grep Unauthorized | wc -l )
+        echo "$result"
+    done
+
+    echo "LOG: START FORK SERVER"
+{{- if .Values.resources.enable }}
+    mongod --syslog --fork --pidfilepath /data/pid.txt --replSet ${MONGO_CLUSTER_REPLICASET}  --auth --keyFile /data/key --wiredTigerCacheSizeGB ${MONGO_CACHE_SIZE_GB} --bind_ip 0.0.0.0
+{{- else }}
+    mongod --syslog --fork --pidfilepath /data/pid.txt --replSet ${MONGO_CLUSTER_REPLICASET}  --auth --keyFile /data/key --bind_ip 0.0.0.0
+{{- end }}
+
+    echo "LOG: Get instance ip"
+    hostname -I | xargs echo -n > /data/myip
+    
+    echo "LOG: Reconfigure replicaset"
+    # Configure the replica set members
+    mongosh --host ${MONGO_MASTER_HOST} -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval "cfg = rs.conf(); cfg.members = [{_id: 0, host: '${MONGO_MASTER_HOST}:27017'}
+{{- range $index := (untilStep 0 (int $max_replicas) 1) -}}
+    , {_id: {{ add $index 1 }}, host:'{{ $read_service }}-{{ $index }}.{{ $read_service }}.{{ $root.Release.Namespace }}:27017', priority:0}
+{{- end -}} 
+    ]; rs.reconfig(cfg, {force : true});"
+    sleep 4s
+
+    echo "LOG: STOP FORK SERVER"
+    cat /data/pid.txt | xargs kill -9 
+
+    echo "LOG: READY"
+{{- if .Values.resources.enable }}
+    mongod --replSet ${MONGO_CLUSTER_REPLICASET} --auth --keyFile /data/key --wiredTigerCacheSizeGB ${MONGO_CACHE_SIZE_GB} --bind_ip 0.0.0.0
+{{- else }}
+    mongod --replSet ${MONGO_CLUSTER_REPLICASET} --auth --keyFile /data/key --bind_ip 0.0.0.0
+{{- end }}
+
+{{- end }}

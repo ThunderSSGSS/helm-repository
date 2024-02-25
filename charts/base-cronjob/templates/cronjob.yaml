@@ -1,0 +1,117 @@
+{{- $root := . }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Values.name }}
+  labels:
+    app: {{ .Values.name }}
+spec:
+  suspend: {{ .Values.cronjob.suspend }}
+  concurrencyPolicy: {{ .Values.cronjob.concurrencyPolicy }}
+  schedule: "{{ .Values.cronjob.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: {{ .Values.name }}
+          annotations:
+            checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+            {{- with .Values.cronjob.annotations }}
+            {{- toYaml . | nindent 12}}
+            {{- end }}
+        spec:
+          {{- if or .Values.cronjob.volumes .Values.cronjob.dotenv }}
+          volumes:
+          {{- if .Values.cronjob.volumes }}
+          {{- range .Values.cronjob.volumes }}
+          - name: {{ .name }}
+            persistentVolumeClaim:
+              claimName: {{ $root.Values.name }}-{{ .name }}-pvc
+          {{- end }}
+          {{- end }}
+
+          {{- if .Values.cronjob.dotenv }}
+          - name: dotenv
+            secret:
+              secretName: {{ .Values.name }}-dotenv
+          {{- end }}
+          {{- end }}
+
+          {{- if .Values.cronjob.imagePullSecret }}
+          imagePullSecrets:
+          - name: {{ .Values.cronjob.imagePullSecret }}
+          {{- end }}
+
+          {{- if .Values.cronjob.nodeSelector }}
+          nodeSelector:
+            {{- with .Values.cronjob.nodeSelector }}
+            {{- toYaml . | nindent 12}}
+            {{- end }}
+          {{- end }}
+
+          restartPolicy: {{ .Values.cronjob.restartPolicy }}
+          
+          containers:
+            - name: {{ .Values.name }}
+              image: {{ .Values.cronjob.image }}:{{ .Values.cronjob.tag }}
+              imagePullPolicy: {{ .Values.cronjob.pullPolicy }}
+              
+              {{- if .Values.cronjob.command }}
+              command: 
+              {{- range .Values.cronjob.command }}
+              - '{{.}}'
+              {{- end }}
+              {{- end }}
+
+              {{- if .Values.cronjob.args }}
+              {{- range .Values.cronjob.args }}
+              args:
+              - '{{.}}'
+              {{- end }}
+              {{- end }}
+
+              {{- if .Values.cronjob.securityContext }}
+              securityContext:
+              {{- with .Values.cronjob.securityContext }}
+              {{- toYaml . | nindent 14}}
+              {{- end }}
+              {{- end }}
+
+              {{- if or .Values.cronjob.volumes .Values.cronjob.dotenv }}
+              volumeMounts:
+              {{- if .Values.cronjob.volumes }}
+              {{- range .Values.cronjob.volumes }}
+              - name: {{ .name }}
+                mountPath: {{ .mountPath }}
+              {{- end }}
+              {{- end }}
+
+              {{- if .Values.cronjob.dotenv }}
+              - name: dotenv
+                mountPath: {{ .Values.cronjob.dotenv.path }}/{{ .Values.cronjob.dotenv.file }}
+                subPath: {{ .Values.cronjob.dotenv.file }}
+              {{- end }}
+              {{- end }}
+
+              {{- if .Values.cronjob.resources }}
+              resources:
+                requests:
+                  cpu: {{ .Values.cronjob.resources.requests.cpu }}
+                  memory: {{ .Values.cronjob.resources.requests.memory }}
+                limits:
+                  cpu: {{ .Values.cronjob.resources.limits.cpu }}
+                  memory: {{ .Values.cronjob.resources.limits.memory }}
+              {{- end }}
+
+
+              {{- if .Values.cronjob.envs }}
+              env:
+              {{- range $key, $value := .Values.cronjob.envs }}
+              - name: {{ $key }}
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ $root.Values.name }}
+                    key: {{ $key }}
+              {{- end }}
+              {{- end }}

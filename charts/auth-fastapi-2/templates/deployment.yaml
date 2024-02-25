@@ -15,6 +15,8 @@ spec:
     metadata:
       labels:
         app: database
+      annotations:
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/configmap.yaml") .) (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum }}
     spec:
       automountServiceAccountToken: false
       containers:
@@ -57,6 +59,8 @@ spec:
     metadata:
       labels:
         app: broker
+      annotations:
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/configmap.yaml") .) (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum }}
     spec:
       automountServiceAccountToken: false
       containers:
@@ -100,6 +104,8 @@ spec:
     metadata:
       labels:
         app: auth-server
+      annotations:
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/configmap.yaml") .) (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum }}
     spec:
       automountServiceAccountToken: false
       containers:
@@ -185,6 +191,8 @@ spec:
     metadata:
       labels:
         app: email-worker
+      annotations:
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/configmap.yaml") .) (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum }}
     spec:
       automountServiceAccountToken: false
       containers:
@@ -229,6 +237,8 @@ spec:
     metadata:
       labels:
         app: db-worker
+      annotations:
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/configmap.yaml") .) (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum }}
     spec:
       automountServiceAccountToken: false
       containers:

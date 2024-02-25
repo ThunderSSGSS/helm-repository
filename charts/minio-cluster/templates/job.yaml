@@ -1,0 +1,54 @@
+##______________________CONFIG_JOB___________________________________________##
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-config-job-{{ randAlphaNum 5 | lower }}
+  annotations:
+    checksum/config: {{ printf "%s" (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum }}
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}-job
+    type: config
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      volumes:
+      - name: entrypoint
+        secret:
+          secretName: {{ .Values.name }}-{{ .Values.name_suffix }}-job
+      containers:
+        - name: {{ .Values.name }}-{{ .Values.name_suffix }}-config-job
+          image: quay.io/minio/minio:{{ .Values.imageTag }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          command: ["/bin/bash", "/entrypoint.d/config_job_entrypoint.sh"]
+          args: [""]
+
+          ##__volumen_mount__##
+          volumeMounts:
+          - name: entrypoint
+            mountPath: /entrypoint.d/config_job_entrypoint.sh
+            subPath: config_job_entrypoint.sh
+
+          ##___ENVIRONMENT_VARIABLES___##
+          env:
+          - name: MINIO_ROOT_USER
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: MINIO_ROOT_USER
+          - name: MINIO_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: MINIO_ROOT_PASSWORD
+          - name: MINIO_SERVER_URL
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: MINIO_SERVER_URL
+          - name: MINIO_BROWSER_REDIRECT_URL
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: MINIO_BROWSER_REDIRECT_URL
+      restartPolicy: Never

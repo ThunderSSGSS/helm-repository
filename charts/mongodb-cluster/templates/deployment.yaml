@@ -1,0 +1,153 @@
+##______________________MASTER_NODE_DEPLOYMENT________________________________##
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}-{{ .Values.name_suffix }}
+      type: master
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}-{{ .Values.name_suffix }}
+        type: master
+      annotations:
+        {{- $config_map := include (print $.Template.BasePath "/configmap.yaml") . }}
+        {{- $secret := printf "%s%s%s" .Values.root_user .Values.root_user_pwd .Values.cluster_mode.cluster_key }}
+        checksum/config: {{ printf "%s%s" $config_map $secret | sha256sum }}
+    spec:
+      {{- if or .Values.storage.enable .Values.cluster_mode.enable }}
+      volumes:
+      {{- end }}
+      {{- if .Values.storage.enable }}
+        - name: {{ .Values.name }}-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.name }}-{{ .Values.name_suffix }}-master-data-pvc
+      {{- end }}
+      {{- if .Values.cluster_mode.enable }}
+        - name: entrypoint
+          configMap:
+            name: {{ .Values.name }}-{{ .Values.name_suffix }}
+      {{- end }}
+      
+      {{- if and .Values.cluster_mode.enable .Values.cluster_mode.schedule.enable }}
+      nodeSelector:
+        {{- with .Values.cluster_mode.schedule.dbInstancesNodeSelector }}
+        {{- toYaml . | nindent 8}}
+        {{- end }}
+      {{- end }}
+
+      containers:
+        - name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+          image: mongo:{{ .Values.version }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          {{- if .Values.cluster_mode.enable }}
+          command: ["/bin/bash", "/entrypoint.d/master_entrypoint.sh"]
+          {{- else }}
+          {{- if .Values.resources.enable }}
+          args: ["--wiredTigerCacheSizeGB","{{ .Values.resources.wiredTigerCacheSizeGB }}"]
+          {{- end }}
+          {{- end }}
+          
+          {{- if or .Values.storage.enable .Values.cluster_mode.enable }}
+          ##__volumen_mount__##
+          volumeMounts:
+          {{- end }}
+          {{- if .Values.storage.enable }}
+          - name: {{ .Values.name }}-data
+            mountPath: /data/db
+          {{- end }}
+          {{- if .Values.cluster_mode.enable }}
+          - name: entrypoint
+            mountPath: /entrypoint.d/master_entrypoint.sh
+            subPath: master_entrypoint.sh
+          {{- end }}
+
+          ###_____PORTS______##
+          ports:
+          - containerPort: 27017
+            name: db-port
+          
+          {{- if .Values.resources.enable }}
+          ##____RESOURCES____##
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+          {{- end }}
+          
+          ##___ENVIRONMENT_VARIABLES___##
+          env:
+          - name: MONGO_INITDB_ROOT_USERNAME
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: root_user
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: root_user_pwd
+          - name: MONGO_CACHE_SIZE_GB
+            value: "{{ .Values.resources.wiredTigerCacheSizeGB }}"
+          {{- if .Values.cluster_mode.enable }}
+          - name: MONGO_CLUSTER_REPLICASET
+            value: "{{ .Values.name }}"
+          - name: MONGO_CLUSTER_KEY
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: cluster_key
+          - name: MONGO_MASTER_HOST
+            value: "{{ .Values.name }}-{{ .Values.name_suffix }}-master.{{ .Release.Namespace }}"
+          {{- end }}
+
+
+{{- if .Values.mongo_express.enable }}
+---
+##______________________MONGO_EXPRESS_DEPLOYMENT________________________________##
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-express
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}-express
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}-{{ .Values.name_suffix }}-express
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}-{{ .Values.name_suffix }}-express
+      annotations:
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/configmap.yaml") .) (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum }}
+    spec:
+      containers:
+        - name: {{ .Values.name }}-{{ .Values.name_suffix }}-express
+          image: mongo-express
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+        
+          ###_____PORTS______##
+          ports:
+          - containerPort: 8081
+            name: port
+          
+          ##___ENVIRONMENT_VARIABLES___##
+          env:
+          - name: ME_CONFIG_MONGODB_URL
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: "{{ .Values.name_suffix }}_url"
+{{- end }}

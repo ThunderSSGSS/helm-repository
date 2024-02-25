@@ -3,9 +3,9 @@ entries:
   auth-fastapi-2:
   - apiVersion: v2
     appVersion: v0.4.0
-    created: "2022-11-18T14:42:02.704105093+02:00"
+    created: "2024-02-25T19:26:00.908760605+02:00"
     description: Helps you to deploy Auth-fastapi-2 on k8s
-    digest: b8086de2c0cde87cff85d621359c71f11e16bd83d9969463faee7818eaec91fa
+    digest: 8ea15e403fd3f682e6acb45b33c5256d07d53b75329878a66f656faa10b37495
     name: auth-fastapi-2
     type: application
     urls:
@@ -14,7 +14,17 @@ entries:
   base-app:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2022-11-18T14:42:02.705041571+02:00"
+    created: "2024-02-25T19:26:00.911856398+02:00"
+    description: Helps you to deploy stateless applications on k8s.
+    digest: 3a37551fa118b6fc24b0632ac2a5702bc3bab85fc324ab20671a91c0a79257ab
+    name: base-app
+    type: application
+    urls:
+    - https://thunderssgss.github.io/helm-repository/base-app-3.3.1.tgz
+    version: 3.3.1
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-02-25T19:26:00.90941811+02:00"
     description: Helps you to deploy stateless applications on k8s
     digest: 40db80f0c744bcd3135b78a37b22681cef92db74910dca22bbbeb7bb0034c3ee
     name: base-app
@@ -22,4 +32,106 @@ entries:
     urls:
     - https://thunderssgss.github.io/helm-repository/base-app-0.1.0.tgz
     version: 0.1.0
-generated: "2022-11-18T14:42:02.702508812+02:00"
+  base-cronjob:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-02-25T19:26:00.91250734+02:00"
+    description: Helps you to create cronjobs on k8s.
+    digest: 7577136127a01bcc182005fc81c7136171221b1b085e46b2ca4fc49a8e553c87
+    name: base-cronjob
+    type: application
+    urls:
+    - https://thunderssgss.github.io/helm-repository/base-cronjob-1.0.0.tgz
+    version: 1.0.0
+  base-job:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-02-25T19:26:00.913081986+02:00"
+    description: Helps you to create jobs on k8s.
+    digest: b98f5263f97b13901c56f6ead45f362118e8ea625fb60b346241316283afe92f
+    name: base-job
+    type: application
+    urls:
+    - https://thunderssgss.github.io/helm-repository/base-job-1.0.0.tgz
+    version: 1.0.0
+  clickhouse-cluster:
+  - apiVersion: v2
+    appVersion: 23.10.3.5
+    created: "2024-02-25T19:26:00.918199636+02:00"
+    description: Creates a clickhouse cluster with horizontal autoscaling and backups
+      cronjobs
+    digest: a08dc66b7ed01a4e2801ffbd9254e76f17f4173f1ab0cdcb22a9ab939f76a774
+    name: clickhouse-cluster
+    type: application
+    urls:
+    - https://thunderssgss.github.io/helm-repository/clickhouse-cluster-0.1.0.tgz
+    version: 0.1.0
+  minio-cluster:
+  - apiVersion: v2
+    appVersion: 1.0.4
+    created: "2024-02-25T19:26:00.919326749+02:00"
+    description: Creates a minio standalone or cluster.
+    digest: 193c8af5cf2516767036916071da8b898207b9614e27761e300481003ec550fa
+    name: minio-cluster
+    type: application
+    urls:
+    - https://thunderssgss.github.io/helm-repository/minio-cluster-0.1.1.tgz
+    version: 0.1.1
+  mongodb-cluster:
+  - apiVersion: v2
+    appVersion: 6.0.4
+    created: "2024-02-25T19:26:00.920807523+02:00"
+    description: Creates a mongodb cluster with horizontal autoscaling and backups
+      cronjobs
+    digest: 5c8a3a41cff73f3991939b16a5b10106f40fed6c80ff1966d45e4fadb9b2b04f
+    name: mongodb-cluster
+    type: application
+    urls:
+    - https://thunderssgss.github.io/helm-repository/mongodb-cluster-0.1.0.tgz
+    version: 0.1.0
+  mysql-cluster:
+  - apiVersion: v2
+    appVersion: 8.0.33
+    created: "2024-02-25T19:26:00.922437339+02:00"
+    description: Creates a mysql cluster with horizontal autoscaling and backups cronjobs
+    digest: 21abfdd1fd85fe17ade1878a79ad73af9fdd3734252f7883e63b0f16acc72772
+    name: mysql-cluster
+    type: application
+    urls:
+    - https://thunderssgss.github.io/helm-repository/mysql-cluster-0.1.0.tgz
+    version: 0.1.0
+  network:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-02-25T19:26:00.922902307+02:00"
+    description: Helps you to configure network policies on namespace
+    digest: b210934f2b27b677907e7c38153154f7e8c3047ea54131efdc4ce109db6d0554
+    name: network
+    type: application
+    urls:
+    - https://thunderssgss.github.io/helm-repository/network-3.2.0.tgz
+    version: 3.2.0
+  postgresql-cluster:
+  - apiVersion: v2
+    appVersion: "14.7"
+    created: "2024-02-25T19:26:00.924828276+02:00"
+    description: Creates a postgresql cluster with horizontal autoscaling and backups
+      cronjobs
+    digest: 0380b17ee04faf9108dbc315f0d18fc424770d7cf53717b2b2a47835ef48e748
+    name: postgresql-cluster
+    type: application
+    urls:
+    - https://thunderssgss.github.io/helm-repository/postgresql-cluster-0.1.0.tgz
+    version: 0.1.0
+  repository:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-02-25T19:26:00.92525469+02:00"
+    description: Helps you to configure secret
+    digest: 48536cb04aea37407e5f4c5ccc919e8ddcdc97b0755b452d3d5beb0b9093db03
+    name: repository
+    type: application
+    urls:
+    - https://thunderssgss.github.io/helm-repository/repository-3.2.0.tgz
+    version: 3.2.0
+generated: "2024-02-25T19:26:00.907579441+02:00"

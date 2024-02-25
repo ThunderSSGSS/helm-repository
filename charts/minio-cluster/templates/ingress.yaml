@@ -1,0 +1,103 @@
+{{- $root := . }}
+{{- if .Values.ingress.enable -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    {{- if .Values.ingress.enable_tls }}
+    cert-manager.io/cluster-issuer: "{{ .Values.ingress.clusterIssuer }}"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    {{- end }}
+    {{- with .Values.ingress.additionalAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.enable_tls }}
+  tls:
+  - hosts:
+    - '{{ .Values.ingress.host }}'
+    - '{{ .Values.ingress.consoleHost }}'
+    {{- if .Values.ingress.tlsSecretName }}
+    secretName: {{ .Values.ingress.tlsSecretName }}
+    {{- else }}
+    secretName: {{ .Values.name }}-{{ .Values.name_suffix }}-tls-certificate
+    {{- end }}
+  {{- end }}
+  rules:
+  - host: '{{ .Values.ingress.host }}'
+    http:
+      paths: 
+        - path: / 
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ .Values.name }}-{{ .Values.name_suffix }}
+              port:
+                number: 9000
+  - host: '{{ .Values.ingress.consoleHost }}'
+    http:
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ .Values.name }}-{{ .Values.name_suffix }}
+              port:
+                number: 9090
+
+{{- if .Values.ingress.cache.enable }}
+##_________________________________STATIC_CACHE_INGRESS___________________________________###
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-cache
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    {{- if .Values.ingress.enable_tls }}
+    cert-manager.io/cluster-issuer: "{{ .Values.ingress.clusterIssuer }}"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    {{- end }}
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/service-upstream: "true" # use services instead of pods
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      {{- .Values.ingress.cache.configuration | nindent 6 }}
+spec:
+  {{- if .Values.ingress.enable_tls }}
+  tls:
+  - hosts:
+    - '{{ .Values.ingress.host }}'
+    - '{{ .Values.ingress.consoleHost }}'
+    {{- if .Values.ingress.tlsSecretName }}
+    secretName: {{ .Values.ingress.tlsSecretName }}
+    {{- else }}
+    secretName: {{ .Values.name }}-{{ .Values.name_suffix }}-tls-certificate
+    {{- end }}
+  {{- end }}
+  rules:
+  - host: '{{ .Values.ingress.host }}'
+    http:
+      paths: 
+        - path: {{ $root.Values.ingress.cache.pathRegex }}
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ .Values.name }}-{{ .Values.name_suffix }}
+              port:
+                number: 9000
+  - host: '{{ .Values.ingress.consoleHost }}'
+    http:
+      paths:
+        - path: {{ $root.Values.ingress.cache.pathRegex }}
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ .Values.name }}-{{ .Values.name_suffix }}
+              port:
+                number: 9090
+{{- end }}
+
+{{- end }}

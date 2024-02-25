@@ -1,0 +1,78 @@
+#________________________________NETWORK_POLICIES_______________________________________#
+
+# Deny all
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Values.name }}-deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+
+---
+
+# INTERNAMESPACES
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Values.name }}-internamespaces
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+  {{- range .Values.allowedNamespacesIngress }}
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: '{{.}}'
+  {{- end }}
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}
+  egress:
+  # dns access
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+  {{- if .Values.allowedNamespaceEgress }}
+  - to:
+    {{- range .Values.allowedNamespaceEgress }}
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: '{{.}}'
+    {{- end }}
+  {{- end }}
+
+
+
+{{- if .Values.allowInternetAccess }}
+---
+# INTERNET ALLOW
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: {{ .Values.name }}-internet-access
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.0.0.0/8
+        - 192.168.0.0/16
+        - 172.16.0.0/20
+{{- end }}

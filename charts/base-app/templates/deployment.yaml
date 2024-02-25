@@ -1,10 +1,10 @@
+{{- $root := . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.name }}-deployment
+  name: {{ .Values.name }}
   labels:
     app: {{ .Values.name }}
-
 spec:
   replicas: {{ .Values.deployment.replicas }}
   selector:
@@ -14,44 +14,202 @@ spec:
     metadata:
       labels:
         app: {{ .Values.name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.deployment.annotations }}
+        {{- toYaml . | nindent 8}}
+        {{- end }}
     spec:
-      automountServiceAccountToken: false
+      {{- if or .Values.deployment.volumes (or .Values.deployment.dotenv .Values.deployment.hostPathVolumes) }}
+      
+      volumes:
+      {{- if .Values.deployment.volumes }}
+      {{- range .Values.deployment.volumes }}
+      - name: {{ .name }}
+        persistentVolumeClaim:
+          claimName: {{ $root.Values.name }}-{{ .name }}-pvc
+      {{- end }}
+      {{- end }}
+
+      {{- if .Values.deployment.dotenv }}
+      - name: dotenv
+        secret:
+          secretName: {{ .Values.name }}-dotenv
+      {{- end }}
+
+      {{- if .Values.deployment.hostPathVolumes }}
+      {{- range .Values.deployment.hostPathVolumes }}
+      - name: {{ .name }}
+        hostPath:
+          path: {{ .hostPath }}
+          type: {{ .type }}
+      {{- end }}
+      {{- end }}
+      
+      {{- end }}
+
+      {{- if .Values.deployment.imagePullSecret }}
+      imagePullSecrets:
+      - name: {{ .Values.deployment.imagePullSecret }}
+      {{- end }}
+
+      {{- if .Values.deployment.nodeSelector }}
+      nodeSelector:
+        {{- with .Values.deployment.nodeSelector }}
+        {{- toYaml . | nindent 8}}
+        {{- end }}
+      {{- end }}
+      
       containers:
         - name: {{ .Values.name }}
           image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
           imagePullPolicy: {{ .Values.deployment.pullPolicy }}
+          
+          {{- if .Values.deployment.command }}
+          command: 
+          {{- range .Values.deployment.command }}
+          - '{{.}}'
+          {{- end }}
+          {{- end }}
+
+          {{- if .Values.deployment.args }}
+          {{- range .Values.deployment.args }}
+          args:
+          - '{{.}}'
+          {{- end }}
+          {{- end }}
+
+          {{- if .Values.deployment.securityContext }}
+          securityContext:
+          {{- with .Values.deployment.securityContext }}
+          {{- toYaml . | nindent 12}}
+          {{- end }}
+          {{- end }}
+
+          {{- if or .Values.deployment.volumes .Values.deployment.dotenv }}
+
+          volumeMounts:
+          {{- if .Values.deployment.volumes }}
+          {{- range .Values.deployment.volumes }}
+          - name: {{ .name }}
+            mountPath: {{ .mountPath }}
+          {{- end }}
+          {{- end }}
+
+          {{- if .Values.deployment.dotenv }}
+          - name: dotenv
+            mountPath: {{ .Values.deployment.dotenv.path }}/{{ .Values.deployment.dotenv.file }}
+            subPath: {{ .Values.deployment.dotenv.file }}
+          {{- end }}
+
+          {{- if .Values.deployment.hostPathVolumes }}
+          {{- range .Values.deployment.hostPathVolumes }}
+          - name: {{ .name }}
+            mountPath: {{ .mountPath }}
+          {{- end }}
+          {{- end }}
+      
+          {{- end }}
 
           {{- if .Values.deployment.ports }}
           ports:
           {{- range .Values.deployment.ports }}
-          - containerPort: {{ .port }}
+          - containerPort: {{ .containerPort }}
             name: {{ .name }}
           {{- end }}
           {{- end }}
 
-          {{- $root := . }}
+          {{- if .Values.deployment.resources }}
+          resources:
+            requests:
+              cpu: {{ .Values.deployment.resources.requests.cpu }}
+              memory: {{ .Values.deployment.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.deployment.resources.limits.cpu }}
+              memory: {{ .Values.deployment.resources.limits.memory }}
+          {{- end }}
+
 
           {{- if .Values.deployment.envs }}
           env:
-          {{- range .Values.deployment.envs }}
-          - name: {{ .name }}
-            valueFrom:
-              configMapKeyRef:
-                name: {{ $root.Values.name }}-configmap
-                key: {{ .name }}
-          {{- end }}
-          {{- end }}
-
-          {{- if .Values.deployment.secrets }}
-          {{- if .Values.deployment.envs }}
-          {{- else }}
-          env:
-          {{- end }}
-          {{- range .Values.deployment.secrets }}
-          - name: {{ .name }}
+          {{- range $key, $value := .Values.deployment.envs }}
+          - name: {{ $key }}
             valueFrom:
               secretKeyRef:
-                name: {{ $root.Values.name }}-secret
-                key: {{ .name }}
+                name: {{ $root.Values.name }}
+                key: {{ $key }}
           {{- end }}
           {{- end }}
+
+        
+        {{- if .Values.deployment.services }}
+        ##________________________________SERVICES_CONFIGS_______________________________________#
+        #________________________________________________________________________________________#
+        {{- range .Values.deployment.services }}
+
+        - name: service-{{ .name }}
+          image: {{ .image }}:{{ .tag }}
+          imagePullPolicy: {{ $root.Values.deployment.pullPolicy }}
+          
+          {{- if .command }}
+          command: 
+          {{- range .command }}
+          - '{{.}}'
+          {{- end }}
+          {{- end }}
+
+          {{- if .args }}
+          {{- range .args }}
+          args:
+          - '{{.}}'
+          {{- end }}
+          {{- end }}
+
+          {{- if .securityContext }}
+          securityContext:
+          {{- with .securityContext }}
+          {{- toYaml . | nindent 12}}
+          {{- end }}
+          {{- end }}
+
+          {{- if or $root.Values.deployment.volumes $root.Values.deployment.dotenv }}
+
+          volumeMounts:
+          {{- if $root.Values.deployment.volumes }}
+          {{- range $root.Values.deployment.volumes }}
+          - name: {{ .name }}
+            mountPath: {{ .mountPath }}
+          {{- end }}
+          {{- end }}
+
+          {{- if $root.Values.deployment.dotenv }}
+          - name: dotenv
+            mountPath: {{ $root.Values.deployment.dotenv.path }}/{{ $root.Values.deployment.dotenv.file }}
+            subPath: {{ $root.Values.deployment.dotenv.file }}
+          {{- end }}
+
+          {{- if $root.Values.deployment.hostPathVolumes }}
+          {{- range $root.Values.deployment.hostPathVolumes }}
+          - name: {{ .name }}
+            mountPath: {{ .mountPath }}
+          {{- end }}
+          {{- end }}
+      
+          {{- end }}
+
+
+          {{- if $root.Values.deployment.envs }}
+          env:
+          {{- range $key, $value := $root.Values.deployment.envs }}
+          - name: {{ $key }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ $root.Values.name }}
+                key: {{ $key }}
+          {{- end }}
+          {{- end }}
+        
+
+        {{- end }}
+        
+        {{- end }}

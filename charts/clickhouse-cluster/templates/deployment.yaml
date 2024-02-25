@@ -1,0 +1,115 @@
+##______________________MASTER_NODE_DEPLOYMENT________________________________##
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}-{{ .Values.name_suffix }}
+      type: master
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}-{{ .Values.name_suffix }}
+        type: master
+      annotations:
+        {{- $config_map := include (print $.Template.BasePath "/configmap.yaml") . }}
+        {{- $secret := printf "%s%s%s" .Values.root_user .Values.root_user_pwd .Values.cluster_mode.cluster_key }}
+        checksum/config: {{ printf "%s%s" $config_map $secret | sha256sum }}
+    spec:
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ .Values.name }}-{{ .Values.name_suffix }}
+      {{- if .Values.storage.enable }}
+        - name: {{ .Values.name }}-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.name }}-{{ .Values.name_suffix }}-master-data-pvc
+      {{- end }}
+      {{- if .Values.cluster_mode.enable }}
+        - name: entrypoint
+          configMap:
+            name: {{ .Values.name }}-{{ .Values.name_suffix }}
+      {{- end }}
+      
+      {{- if and .Values.cluster_mode.enable .Values.cluster_mode.schedule.enable }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+      {{- range $key, $value := .Values.cluster_mode.schedule.dbInstancesNodeSelector }}
+              - key: {{ $key }}
+                operator: In
+                values:
+                - {{ $value }}
+      {{- end }}
+      {{- end }}
+
+      containers:
+        - name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+          image: clickhouse/clickhouse-server:{{ .Values.version }}-alpine
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          
+          ##__volumen_mount__##
+          volumeMounts:
+          - name: config
+            mountPath: /etc/clickhouse-server/users.xml
+            subPath: users.xml
+          - name: config
+            mountPath: /etc/clickhouse-server/config.xml
+            subPath: config.xml
+          {{- if .Values.storage.enable }}
+          - name: {{ .Values.name }}-data
+            mountPath: /var/lib/clickhouse/data
+          {{- end }}
+          {{- if .Values.cluster_mode.enable }}
+          - name: entrypoint
+            mountPath: /docker-entrypoint-initdb.d/master_entrypoint.sh
+            subPath: master_entrypoint.sh
+          {{- end }}
+
+          ###_____PORTS______##
+          ports:
+          - containerPort: 8123
+            name: http-port
+          - containerPort: 9000
+            name: db-port
+          
+          {{- if .Values.resources.enable }}
+          ##____RESOURCES____##
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+          {{- end }}
+          
+          ##___ENVIRONMENT_VARIABLES___##
+          env:
+          - name: ROOT_USER
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: root_user
+          - name: ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: root_user_pwd
+          {{- if .Values.cluster_mode.enable }}
+          - name: CLUSTER_KEY
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: cluster_key
+          - name: MASTER_HOST
+            value: "{{ .Values.name }}-{{ .Values.name_suffix }}-master.{{ .Release.Namespace }}"
+          {{- end }}

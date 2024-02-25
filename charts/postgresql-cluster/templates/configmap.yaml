@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}
+data:
+
+  #_____________BACKUP_JOB_ENTRYPOINT________________________________________#
+  backup_job_entrypoint.sh: |
+    mkdir -p /data/backups
+    export today=$(date '+%Y-%m-%d-%H_%M_%S')
+    export PGPASSWORD=${POSTGRES_PASSWORD}
+    
+    echo "LOG: Make the backup ${today}"
+    pg_dump -U ${POSTGRES_USER} -h ${POSTGRES_HOST} --clean ${POSTGRES_DB} > /data/backups/${today}.sql
+    if (( $? != 0 )); then exit 1; fi
+
+    echo "LOG: Compress the backup"
+    cd /data/backups && tar czf ${today}.tar.gz ${today}.sql
+
+    echo "LOG: Send backup ${today} to S3 bucket"
+    python3 /code/upload_file.py /data/backups/${today}.tar.gz
+  
+  {{ if .Values.cluster_mode.enable }}
+  #_____________MATSER_NODE_ENTRYPOINT_______________________________________#
+  master_entrypoint.sh: |
+    echo "LOG: CREATING REPLICATION USER"
+    export PGPASSWORD=${POSTGRES_PASSWORD}
+
+    echo "CREATE ROLE ${POSTGRES_REPLICATION_USER} WITH REPLICATION LOGIN PASSWORD '${POSTGRES_REPLICATION_PASSWORD}';" > /var/lib/postgresql/data.sql
+    psql -d postgres -U ${POSTGRES_USER} -f /var/lib/postgresql/data.sql
+    rm /var/lib/postgresql/data.sql
+
+    echo "LOG: CONFIG ACCESS"
+    echo "host  replication  ${POSTGRES_REPLICATION_USER}  0.0.0.0/0  trust" >> ${PGDATA}/pg_hba.conf
+
+    echo "LOG: RESTARTING DATABASE"
+    pg_ctl restart
+  
+
+  #_____________READ_REPLICA_NODE_ENTRYPOINT____________________________#
+  replicas_entrypoint.sh: |
+    echo "LOG: CHECK MASTER STATUS"
+    export PGPASSWORD=${POSTGRES_PASSWORD}
+
+    echo "" > /var/lib/postgresql/data.sql
+    export result="1"
+    while (($result != 0))
+    do
+        sleep 4s
+        psql -d postgres -U ${POSTGRES_USER} -h ${MASTER_HOST} -f /var/lib/postgresql/data.sql
+        export result=$?
+        echo "$result"
+    done
+
+    # This scripts will run only one time
+    if [ ! -e ${PGDATA}/postgresql.conf ]; then
+        echo "LOG: COPY DATA"
+        export PGPASSWORD=${POSTGRES_REPLICATION_PASSWORD}
+        pg_basebackup -h ${MASTER_HOST} -U ${POSTGRES_REPLICATION_USER} --checkpoint=fast -D ${PGDATA} -R --slot=${RANDOM} -C
+
+        chmod 750 ${PGDATA}
+        chown postgres:postgres -R ${PGDATA}
+    fi
+
+    echo "LOG: START SERVER"
+    su - postgres -c "postgres -D ${PGDATA}"
+
+  {{- end }}

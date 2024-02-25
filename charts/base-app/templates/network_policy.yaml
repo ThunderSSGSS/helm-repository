@@ -1,0 +1,72 @@
+{{- $root := . }}
+{{- if or .Values.upstreams .Values.external_upstreams -}}
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Values.name }}-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Values.name }}
+  policyTypes:
+  - Egress
+  egress:
+  {{- if .Values.upstreams }}
+  {{- range .Values.upstreams }}
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .namespace | default $root.Release.Namespace }}
+      podSelector:
+        matchLabels:
+          {{ .label }}: {{ .label_value }}
+    ports:
+    - protocol: {{ .protocol | default "TCP" }}
+      port: {{ .containerPort }}
+  {{- end }}
+  {{- end }}
+
+  {{- if .Values.external_upstreams }}
+  {{- range .Values.external_upstreams }}
+  - to:
+    {{- range .ips }}
+    - ipBlock:
+        cidr: {{ . }}/32
+    {{- end }}
+    ports:
+    - protocol: {{ .protocol | default "TCP" }}
+      port: {{ .port }}
+  {{- end }}
+  {{- end }}
+
+{{- end }}
+
+
+{{- if .Values.upstreams -}}
+{{- range .Values.upstreams }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .app }}-ingress-from-{{ $root.Values.name }}.{{ $root.Release.Namespace }}
+  namespace: {{ .namespace | default $root.Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      {{ .label }}: {{ .label_value }}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ $root.Release.Namespace }}
+      podSelector:
+        matchLabels:
+          app: {{ $root.Values.name }}
+    ports:
+    - protocol: {{ .protocol | default "TCP" }}
+      port: {{ .containerPort }}
+{{- end }}
+{{- end }}

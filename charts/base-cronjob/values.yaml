@@ -1,0 +1,77 @@
+name: app-name
+
+
+cronjob:
+  image: image_name
+  tag: image_tag
+  pullPolicy: Always
+  
+  restartPolicy: OnFailure
+  concurrencyPolicy: Forbid #Allow Replace
+  suspend: false
+  schedule: "0 1 * * *"
+  # command: ['/bin/bash', 'hello.sh'] # same as entrypoint
+  # args: ['--arg=true'] # same as command
+  # imagePullSecret: example-registry
+
+  # securityContext:
+  #   privileged: true
+
+  # nodeSelector:
+  #   KEY: VALUE
+
+  # annotations: # add more pod annotations
+  #   linkerd.io/inject: enabled
+
+  # ports:
+  # - name: http # UNIQUE
+  #   protocol: TCP # values: TCP, UDP
+  #   containerPort: 8080
+  #   servicePort: 80
+  #   nodePort: 5833 # OPTIONAL if set will enabled node port
+
+  # resources:
+  #   requests:
+  #     cpu: 50m
+  #     memory: 100Mi
+  #   limits:
+  #     cpu: 100m
+  #     memory: 250Mi
+
+  # envs: # will be stored on a secret
+  #   KEY: VALUE
+
+  # dotenv: # wil be stored on dotenv file
+  #   path: /app
+  #   file: ".env"
+  #   content: |
+  #     asdasdasdasdasdasda
+
+  # volumes:
+  # - name: data # UNIQUE
+  #   storageClassName: gp2
+  #   mountPath: /data # UNIQUE
+  #   capacity: 1Gi
+
+
+# upstreams: # creates network policies to access other pods
+# - label: app # pod selector label
+#   label_value: app2 # pod selector label value
+#   containerPort: 8080
+#   namespace: default # OPTIONAL | default: This namespace
+#   protocol: TCP # OPTIONAL | values: TCP, UDP | default: TCP
+#   paths: # OPTIONAL | only when http
+#   - path: /
+#     pathType: Prefix # values: Prefix, Exact
+#     methods: ["GET","HEAD","POST","PUT","DELETE","CONNECT","OPTIONS","TRACE"] # you can use "[]" to enables all methods      
+
+
+# external_upstreams: # creates services and network policies external services
+# - host: external.aws.amazon.com
+#   protocol: TCP # OPTIONAL | values: TCP, UDP | default: TCP 
+#   ips: ["192.168.100.100"]
+#   port: 5003
+#   paths: # OPTIONAL | only when http
+#   - path: /metrics/mega
+#     pathType: Exact # values: Prefix, Exact
+#     methods: ["GET"] # you can use "[]" to enables all methods   

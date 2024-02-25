@@ -1,0 +1,52 @@
+##______________________MASTER_NODE_SERVICE________________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+spec:
+  {{- if .Values.service.add_node_port }}
+  type: LoadBalancer
+  {{- else }}
+  type: ClusterIP
+  {{- end }}
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: master
+  ports:
+  - name: {{ .Values.name_suffix }}-http-port
+    protocol: TCP
+    port: 8123
+    targetPort: 8123
+    {{- if .Values.service.add_node_port }}
+    nodePort: {{ .Values.service.nodePort }}
+    {{- end }}
+  - name: {{ .Values.name_suffix }}-port
+    protocol: TCP
+    port: 9000
+    targetPort: 9000
+
+{{- if .Values.cluster_mode.enable }}
+---
+##______________________READ_REPLICAS_SERVICE________________________________##
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-read
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: read
+spec:
+  clusterIP: None
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: read
+  ports:
+  - name: {{ .Values.name_suffix }}-http-port
+    protocol: TCP
+    port: 8123
+    targetPort: 8123
+  - name: {{ .Values.name_suffix }}-port
+    protocol: TCP
+    port: 9000
+    targetPort: 9000
+{{- end }}

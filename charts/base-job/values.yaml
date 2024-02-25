@@ -1,0 +1,46 @@
+name: app-name
+
+
+job:
+  image: image_name
+  tag: image_tag
+  pullPolicy: Always
+  
+  ttlSecondsAfterFinished: 3600
+  restartPolicy: OnFailure # Never
+  # command: ['/bin/bash', 'hello.sh'] # same as entrypoint
+  # args: ['--arg=true'] # same as command
+  # imagePullSecret: example-registry
+
+  # securityContext:
+  #   privileged: true
+
+  # nodeSelector:
+  #   KEY: VALUE
+
+  # annotations: # add more pod annotations
+  #   linkerd.io/inject: enabled
+
+  # ports:
+  # - name: http # UNIQUE
+  #   protocol: TCP # values: TCP, UDP
+  #   containerPort: 8080
+  #   servicePort: 80
+  #   nodePort: 5833 # OPTIONAL if set will enabled node port
+
+  # resources:
+  #   requests:
+  #     cpu: 50m
+  #     memory: 100Mi
+  #   limits:
+  #     cpu: 100m
+  #     memory: 250Mi
+
+  # envs: # will be stored on a secret
+  #   KEY: VALUE
+
+  # dotenv: # wil be stored on dotenv file
+  #   path: /code
+  #   file: "entrypoint"
+  #   content: |
+  #     asdasdasdasdasdasda

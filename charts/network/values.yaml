@@ -1,0 +1,5 @@
+name: network
+
+allowInternetAccess: true
+allowedNamespacesIngress: ["ingress-nginx", "monitoring", "kube-system"]
+# allowedNamespaceEgress: ["database"]

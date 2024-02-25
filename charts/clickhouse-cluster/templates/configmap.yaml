@@ -1,0 +1,40 @@
+{{- $root := . }}
+{{- $read_service := printf "%s-%s-read" .Values.name .Values.name_suffix }}
+{{- $max_replicas := .Values.cluster_mode.autoscaler.enable | ternary .Values.cluster_mode.autoscaler.maxReadReplicas .Values.cluster_mode.readReplicas }}
+
+#_____________BACKUP_JOB_ENTRYPOINT____________________________#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}
+data:
+  backup_job_entrypoint.sh: |
+    mkdir /data/backups
+    export today=$(date '+%Y-%m-%d-%H_%M_%S')
+
+    echo "LOG: Make the backup ${today}"
+    mongodump --host ${MASTER_HOST} -u ${ROOT_USER} -p ${ROOT_PASSWORD} ${DATABASE} \
+    --authenticationDatabase admin --db ${MONGO_DATABASE_NAME} --out /data/backups/${today}
+    
+    if (( $? != 0 )); then exit 1; fi
+    
+    echo "LOG: Compress the backup"
+    cd /data/backups && tar czf ${today}.tar.gz ${today}
+
+    echo "LOG: Send backup ${today} to S3 bucket"
+    python3 /code/upload_file.py /data/backups/${today}.tar.gz
+
+
+{{ if .Values.cluster_mode.enable }}
+  #________________MASTER_NODE_ENTRYPOINT____________________________#
+  master_entrypoint.sh: |
+    echo "LOG: START FORK SERVER"
+    echo "ENABLE CLUSTER MODE"
+
+
+  #_____________READ_REPLICA_NODE_ENTRYPOINT____________________________#
+  replicas_entrypoint.sh: |
+    echo "LOG: GENERATING CLUSTER KEY"
+
+
+{{- end }}

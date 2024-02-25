@@ -1,0 +1,46 @@
+##______________________CONFIG_JOB___________________________________________##
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-config-job-{{ randAlphaNum 5 | lower }}
+  annotations:
+    checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/configmap.yaml") .) (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum }}
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: config
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      volumes:
+      - name: entrypoint
+        secret:
+          secretName: {{ .Values.name }}-{{ .Values.name_suffix }}
+      containers:
+        - name: {{ .Values.name }}-{{ .Values.name_suffix }}-config-job
+          image: clickhouse/clickhouse-server:{{ .Values.version }}-alpine
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          command: ["/bin/bash", "/entrypoint.d/config_job_entrypoint.sh"]
+          args: [""]
+
+          ##__volumen_mount__##
+          volumeMounts:
+          - name: entrypoint
+            mountPath: /entrypoint.d/config_job_entrypoint.sh
+            subPath: config_job_entrypoint.sh
+
+          ##___ENVIRONMENT_VARIABLES___##
+          env:
+          - name: ROOT_USER
+            valueFrom:
+              secretKeyRef: 
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: root_user
+          - name: ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.name }}-{{ .Values.name_suffix }}
+                key: root_user_pwd
+          - name: MASTER_HOST
+            value: "{{ .Values.name }}-{{ .Values.name_suffix }}-master.{{ .Release.Namespace }}"
+      restartPolicy: Never

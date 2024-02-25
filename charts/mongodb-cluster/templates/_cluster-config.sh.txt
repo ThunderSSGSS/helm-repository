@@ -1,0 +1,30 @@
+echo "LOG: Check the primary server status"
+export result="0"
+while (($result == 0))
+do
+    sleep 4s
+    export result=$( mongosh --host ${MONGO_MASTER_HOST} --eval "rs.status()" --json relaxed | grep Unauthorized | wc -l )
+    echo "$result"
+done
+
+{{- if .Values.cluster_mode.enable }}
+echo "LOG: Initiate Replicaset"
+mongosh --host ${MONGO_MASTER_HOST} -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval "rs.initiate({_id: '${MONGO_CLUSTER_REPLICASET}',members: [{_id: 0, host: '${MONGO_MASTER_HOST}:27017'}]})"
+{{- end }}
+
+# Create databases
+{{- range .Values.databases }}
+echo "LOG: Create Database {{ .name }}"
+export result="1"
+while (($result > 0))
+do
+    export result=$( mongosh --host ${MONGO_MASTER_HOST} -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --json relaxed --eval "use {{ .name }}" --eval "db.database_info.replaceOne({_id:'0'}, {_id:'0', name:'{{ .name }}'}, {upsert:true} )" | grep "not primary" | wc -l )
+    echo "$result"
+    if (( $result > 0 )); then sleep 4s; fi
+done
+mongosh --host ${MONGO_MASTER_HOST} -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval "use {{ .name }}" {{ if and .admin_user .admin_user_pwd }} --eval "db.createUser({user: '{{ .admin_user }}', pwd: '{{ .admin_user_pwd }}', roles: [ { role: 'readWrite', db: '{{ .name }}' } ]})" 
+mongosh --host ${MONGO_MASTER_HOST} -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval "use {{ .name }}" --eval "db.changeUserPassword('{{ .admin_user }}', '{{ .admin_user_pwd }}')" {{- end }}
+{{- end }}
+
+
+echo "LOG: READY"

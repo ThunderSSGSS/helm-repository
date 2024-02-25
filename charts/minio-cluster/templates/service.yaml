@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}
+  labels:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+    type: read
+spec:
+  clusterIP: None
+  selector:
+    app: {{ .Values.name }}-{{ .Values.name_suffix }}
+  ports:
+  - name: {{ .Values.name_suffix }}-api
+    protocol: TCP
+    port: 9000
+    targetPort: 9000
+  - name: {{ .Values.name_suffix }}-console
+    protocol: TCP
+    port: 9090
+    targetPort: 9090

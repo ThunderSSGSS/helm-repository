@@ -1,0 +1,22 @@
+name: jornal
+
+deployment:
+  replicas: 1
+
+  image: jornal
+  tag: 1.21.6-alpine
+  pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+    limits:
+      cpu: 100m
+      memory: 250Mi
+
+  ports:
+  - name: http
+    protocol: TCP 
+    containerPort: 80
+    servicePort: 80

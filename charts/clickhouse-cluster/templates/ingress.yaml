@@ -1,0 +1,36 @@
+{{- $root := . }}
+{{- if .Values.ingress.create -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.ingress.bodySize }}
+    {{- if .Values.ingress.enable_tls }}
+    cert-manager.io/cluster-issuer: "{{ .Values.ingress.clusterIssuer }}"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    {{- end }}
+spec:
+  {{- if .Values.ingress.enable_tls }}
+  tls:
+  - hosts:
+    - {{ .Values.ingress.host }}
+    {{- if .Values.ingress.tlsSecretName }}
+    secretName: {{ .Values.ingress.tlsSecretName }}
+    {{- else }}
+    secretName: {{ .Values.name }}-{{ .Values.name_suffix }}-master-tls-certificate
+    {{- end }}
+  {{- end }}
+  rules:
+  - host: {{ .Values.ingress.host }}
+    http:
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ .Values.name }}-{{ .Values.name_suffix }}-master
+              port:
+                number: 8123
+{{- end }}

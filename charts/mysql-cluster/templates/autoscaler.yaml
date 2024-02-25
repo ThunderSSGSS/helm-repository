@@ -1,0 +1,32 @@
+{{- if .Values.resources.enable }}
+{{- if and .Values.cluster_mode.enable  .Values.cluster_mode.autoscaler.enable -}}
+#____________________READ_REPLICAS_AUTOSCALER_____________________________________#
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-read
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: {{ .Values.name }}-{{ .Values.name_suffix }}-read
+  maxReplicas: {{ .Values.cluster_mode.autoscaler.maxReadReplicas }}
+  minReplicas: {{ .Values.cluster_mode.readReplicas }}
+  targetCPUUtilizationPercentage: {{ .Values.cluster_mode.autoscaler.targetCPUUtilizationPercentage }}
+
+---
+#____________________PROXYSQL_REPLICAS_AUTOSCALER_____________________________________#
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.name }}-{{ .Values.name_suffix }}-proxysql
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.name }}-{{ .Values.name_suffix }}-proxysql
+  maxReplicas: {{ .Values.cluster_mode.autoscaler.maxProxysqlReplicas }}
+  minReplicas: {{ .Values.cluster_mode.proxysqlReplicas }}
+  targetCPUUtilizationPercentage: {{ .Values.cluster_mode.autoscaler.targetCPUUtilizationPercentage }}
+{{- end }}
+{{- end }}

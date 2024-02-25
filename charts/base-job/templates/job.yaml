@@ -1,0 +1,94 @@
+##______________________JOB___________________________________________##
+{{- $root := . }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.name }}
+  labels:
+    app: {{ .Values.name }}
+spec:
+  ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}
+    spec:
+      {{- if .Values.job.dotenv }}
+      volumes:
+      {{- if .Values.job.dotenv }}
+      - name: dotenv
+        secret:
+          secretName: {{ .Values.name }}-dotenv
+      {{- end }}
+      {{- end }}
+
+      {{- if .Values.job.imagePullSecret }}
+      imagePullSecrets:
+      - name: {{ .Values.job.imagePullSecret }}
+      {{- end }}
+
+      {{- if .Values.job.nodeSelector }}
+      nodeSelector:
+        {{- with .Values.job.nodeSelector }}
+        {{- toYaml . | nindent 12}}
+        {{- end }}
+      {{- end }}
+
+      restartPolicy: {{ .Values.job.restartPolicy }}
+      
+      containers:
+        - name: {{ .Values.name }}
+          image: {{ .Values.job.image }}:{{ .Values.job.tag }}
+          imagePullPolicy: {{ .Values.job.pullPolicy }}
+          
+          {{- if .Values.job.command }}
+          command: 
+          {{- range .Values.job.command }}
+          - '{{.}}'
+          {{- end }}
+          {{- end }}
+
+          {{- if .Values.job.args }}
+          {{- range .Values.job.args }}
+          args:
+          - '{{.}}'
+          {{- end }}
+          {{- end }}
+
+          {{- if .Values.job.securityContext }}
+          securityContext:
+          {{- with .Values.job.securityContext }}
+          {{- toYaml . | nindent 14}}
+          {{- end }}
+          {{- end }}
+
+          {{- if .Values.job.dotenv }}
+          volumeMounts:
+          {{- if .Values.job.dotenv }}
+          - name: dotenv
+            mountPath: {{ .Values.job.dotenv.path }}/{{ .Values.job.dotenv.file }}
+            subPath: {{ .Values.job.dotenv.file }}
+          {{- end }}
+          {{- end }}
+
+          {{- if .Values.job.resources }}
+          resources:
+            requests:
+              cpu: {{ .Values.job.resources.requests.cpu }}
+              memory: {{ .Values.job.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.job.resources.limits.cpu }}
+              memory: {{ .Values.job.resources.limits.memory }}
+          {{- end }}
+
+
+          {{- if .Values.job.envs }}
+          env:
+          {{- range $key, $value := .Values.job.envs }}
+          - name: {{ $key }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ $root.Values.name }}
+                key: {{ $key }}
+          {{- end }}
+          {{- end }}

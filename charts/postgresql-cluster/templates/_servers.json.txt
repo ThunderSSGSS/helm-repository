@@ -1,0 +1,18 @@
+{
+    "Servers": {
+      "1": {
+        "Name": "{{ .Values.name }}-{{ .Values.name_suffix }}",
+        "Group": "Servers",
+        {{- if .Values.cluster_mode.enable }}
+        "Host": "{{ .Values.name }}-{{ .Values.name_suffix }}-pgpool",
+        {{- else }}
+        "Host": "{{ .Values.name }}-{{ .Values.name_suffix }}-master",
+        {{- end }}
+        "Port": 5432,
+        "MaintenanceDB": "postgres",
+        "Username": "{{ .Values.root_user }}",
+        "PassFile": "/pgpass",
+        "SSLMode": "prefer"
+      }
+    }
+}

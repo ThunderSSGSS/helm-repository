@@ -1,0 +1,31 @@
+listen_addresses = '*'
+port = 5432
+backend_hostname0 = '{{ .Values.name }}-{{ .Values.name_suffix }}-master'
+backend_port0 = 5432
+backend_weight0 = 0
+backend_flag0 = 'ALWAYS_PRIMARY|DISALLOW_TO_FAILOVER'
+backend_hostname1 = '{{ .Values.name }}-{{ .Values.name_suffix }}-read'
+backend_port1 = 5432
+backend_weight1 = 1
+backend_flag1 = 'DISALLOW_TO_FAILOVER'
+
+num_init_children = {{ .Values.max_connections }}
+
+#child_life_time = 0
+#{{ $result := div .Values.max_connections 32 }}
+#max_pool = {{ (int $result) }}
+
+#log_connections = on
+#log_statement = on
+#log_statement_per_node = on
+
+sr_check_period = 0
+#sr_check_user ='${POSTGRES_USERNAME}'
+#sr_check_password = '${POSTGRES_PASSWORD}'
+pool_passwd = '/config/pool_passwd'
+
+load_balance_mode = on
+# statement level loadbalance
+statement_level_load_balance = on
+connection_cache = on
+enable_pool_hba = on

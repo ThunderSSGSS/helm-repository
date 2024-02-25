@@ -1,0 +1,65 @@
+# Resources names prefix, all resources names will starts with <name>-<name_suffix>
+name: test
+name_suffix: minio
+
+imagePullPolicy: IfNotPresent # all images pull policy
+imageTag: RELEASE.2023-10-16T04-13-43Z # tag of minio official image
+
+ingress:
+  enable: false # when true creates a ingress
+  # additionalAnnotations: # Set additional nginx controller annotations
+  #   nginx.ingress.kubernetes.io/proxy-body-size: 30m 
+  host: host.com
+  consoleHost: console.host.com
+  enable_tls: false # only when true | enables tls and requests a certificate from clusterIssuer
+  clusterIssuer: letsencrypt-prod
+  # tlsSecretName: secret-name # set certificate secret name
+  # cache configurations
+  cache:
+    enable: false # if enable will create a new ingress with static cache configurations
+    pathRegex: /.+\.(css|js|jpg|jpeg|png|gif|ico)
+    configuration: |
+      expires 1y;
+      proxy_cache_bypass $http_x_purge;
+      proxy_cache static-cache;
+      proxy_cache_valid 200              168h;
+      proxy_cache_valid 301              4h;
+      proxy_cache_valid 302              1h;
+      proxy_cache_valid 400 401 403 404  30s;
+      proxy_cache_valid 500 501 502 503  30s;
+      proxy_cache_valid 429              10s;
+      proxy_cache_use_stale error timeout invalid_header updating http_429 http_500 http_502 http_503 http_504;
+      add_header X-Proxy-Cache $upstream_cache_status;
+
+# CREDENTIALS
+root_user: root
+root_user_pwd: password
+
+# DATABASES
+buckets:
+- name: static # name of the buckets | for best practice use "_" to separe words
+  is_public: false
+  #admin_user: admin # database admin user | the user will be created if doesn't exist
+  #admin_user_pwd: password # must be setted if admin_user is setted
+
+
+# RESOURCES
+resources:
+  enable: false
+  requests:
+    cpu: 50m
+    memory: 100Mi
+  limits:
+    cpu: 200m
+    memory: 1500Mi
+
+# CLUSTER
+cluster:
+  # please check https://min.io/product/erasure-code-calculator to calculate the number of nodes you want
+  nodes: 1
+
+# STORAGE
+storage:
+  enable: false
+  storageClassName: gp2
+  capacity: 10Gi

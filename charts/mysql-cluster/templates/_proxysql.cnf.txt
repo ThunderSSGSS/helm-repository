@@ -1,0 +1,64 @@
+
+admin_variables=
+{
+	admin_credentials="admin:admin"
+	mysql_ifaces="127.0.0.1:6032;/tmp/proxysql_admin.sock"
+}
+
+mysql_variables=
+{
+    threads=4
+    max_connections={{ .Values.max_connections }}
+    default_query_delay=0
+    default_query_timeout=36000000
+    have_compress=true
+    interfaces="0.0.0.0:3306"
+    monitor_enabled=false
+    server_version="{{ .Values.version }}"
+}
+
+mysql_replication_hostgroups =
+(
+    { writer_hostgroup=10 , reader_hostgroup=20 , comment="GROUPS" }
+)
+
+
+mysql_servers =
+(
+    { address="{{ .Values.name }}-{{ .Values.name_suffix }}-master" , port=3306 , hostgroup=10, max_connections={{ .Values.max_connections }} },
+    { address="{{ .Values.name }}-{{ .Values.name_suffix }}-read" , port=3306 , hostgroup=20, max_connections={{ .Values.max_connections }} }
+)
+
+mysql_query_rules =
+(
+    {
+        rule_id=100
+        active=1
+        match_pattern="^SELECT .* FOR UPDATE"
+        destination_hostgroup=10
+        apply=1
+    },
+    {
+        rule_id=200
+        active=1
+        match_pattern="^SELECT .*"
+        destination_hostgroup=20
+        apply=1
+    },
+    {
+        rule_id=300
+        active=1
+        match_pattern=".*"
+        destination_hostgroup=10
+        apply=1
+    }
+)
+
+mysql_users =
+(
+    { username = "{{ .Values.root_user }}" , password = "{{ .Values.root_user_pwd }}" , default_hostgroup = 10 , active = 1 }
+    {{- range .Values.databases -}}{{- if and .admin_user .admin_user_pwd -}},
+    { username = "{{ .admin_user }}" , password = "{{ .admin_user_pwd }}" , default_hostgroup = 10 , active = 1 }
+    {{- end }}
+    {{- end }}
+)
