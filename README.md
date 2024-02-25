@@ -1,5 +1,15 @@
 # ThunderSSGSS public helm chart repository 
 
+## Install Helm Repository
+Install the repository
+```shell
+helm repo add thunderssgss https://thunderssgss.github.io/helm-repository/
+```
+If you already installed the repository, use the command to update
+```shell
+helm repo update thunderssgss
+```
+
 ## CHARTS
 * [auth-fastapi-2](./charts/auth-fastapi-2/) => Helps you to deploy [Auth-fastapi-2](https://github.com/ThunderSSGSS/Auth-fastapi-2) on k8s;
 * [base-app](./charts/base-app/) => Helps you to deploy stateless apps on k8s;

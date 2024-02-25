@@ -1,6 +1,6 @@
 apiVersion: v2
 name: repository
-description: Helps you to configure secret
+description: Helps you to configure image registry on namespace
 
 # A chart can be either an 'application' or a 'library' chart.
 #

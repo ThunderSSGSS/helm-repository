@@ -3,9 +3,9 @@ entries:
   auth-fastapi-2:
   - apiVersion: v2
     appVersion: v0.4.0
-    created: "2024-02-25T19:26:00.908760605+02:00"
+    created: "2024-02-25T19:56:04.532622751+02:00"
     description: Helps you to deploy Auth-fastapi-2 on k8s
-    digest: 8ea15e403fd3f682e6acb45b33c5256d07d53b75329878a66f656faa10b37495
+    digest: 015be61f92b43131dca05965dee3ce93f88d1c617d0aba555e873adeb3b9f358
     name: auth-fastapi-2
     type: application
     urls:
@@ -14,9 +14,9 @@ entries:
   base-app:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2024-02-25T19:26:00.911856398+02:00"
+    created: "2024-02-25T19:56:04.53635389+02:00"
     description: Helps you to deploy stateless applications on k8s.
-    digest: 3a37551fa118b6fc24b0632ac2a5702bc3bab85fc324ab20671a91c0a79257ab
+    digest: a54676d29491c3b47ceceebf053ee5fcda3dc45dfca5be8fd8d1f8aa6a4787da
     name: base-app
     type: application
     urls:
@@ -24,7 +24,7 @@ entries:
     version: 3.3.1
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2024-02-25T19:26:00.90941811+02:00"
+    created: "2024-02-25T19:56:04.533486289+02:00"
     description: Helps you to deploy stateless applications on k8s
     digest: 40db80f0c744bcd3135b78a37b22681cef92db74910dca22bbbeb7bb0034c3ee
     name: base-app
@@ -35,9 +35,9 @@ entries:
   base-cronjob:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2024-02-25T19:26:00.91250734+02:00"
+    created: "2024-02-25T19:56:04.537042116+02:00"
     description: Helps you to create cronjobs on k8s.
-    digest: 7577136127a01bcc182005fc81c7136171221b1b085e46b2ca4fc49a8e553c87
+    digest: 9ce8df7cd50e299cea7b605faefe6e7be6c5a2cfe5aa2ca55862ef892c709f4c
     name: base-cronjob
     type: application
     urls:
@@ -46,9 +46,9 @@ entries:
   base-job:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2024-02-25T19:26:00.913081986+02:00"
+    created: "2024-02-25T19:56:04.537577346+02:00"
     description: Helps you to create jobs on k8s.
-    digest: b98f5263f97b13901c56f6ead45f362118e8ea625fb60b346241316283afe92f
+    digest: 9728454f2cec529df5d77a1fe52242af6568dbc5257bd763604af82df339612f
     name: base-job
     type: application
     urls:
@@ -57,10 +57,10 @@ entries:
   clickhouse-cluster:
   - apiVersion: v2
     appVersion: 23.10.3.5
-    created: "2024-02-25T19:26:00.918199636+02:00"
+    created: "2024-02-25T19:56:04.540312397+02:00"
     description: Creates a clickhouse cluster with horizontal autoscaling and backups
       cronjobs
-    digest: a08dc66b7ed01a4e2801ffbd9254e76f17f4173f1ab0cdcb22a9ab939f76a774
+    digest: c3ab4133e431cfbfa0940a66848a9a8e88782116f764f8e45e457926ed841f62
     name: clickhouse-cluster
     type: application
     urls:
@@ -69,9 +69,9 @@ entries:
   minio-cluster:
   - apiVersion: v2
     appVersion: 1.0.4
-    created: "2024-02-25T19:26:00.919326749+02:00"
+    created: "2024-02-25T19:56:04.54131659+02:00"
     description: Creates a minio standalone or cluster.
-    digest: 193c8af5cf2516767036916071da8b898207b9614e27761e300481003ec550fa
+    digest: 52b437b146644e588a27fc70297ca59edb62c17eaf73fa22980e8e0b9dba5fbb
     name: minio-cluster
     type: application
     urls:
@@ -80,10 +80,10 @@ entries:
   mongodb-cluster:
   - apiVersion: v2
     appVersion: 6.0.4
-    created: "2024-02-25T19:26:00.920807523+02:00"
+    created: "2024-02-25T19:56:04.542854588+02:00"
     description: Creates a mongodb cluster with horizontal autoscaling and backups
       cronjobs
-    digest: 5c8a3a41cff73f3991939b16a5b10106f40fed6c80ff1966d45e4fadb9b2b04f
+    digest: 1d82130ae329029bcedbda103e9f53d39bf7c9b8dd2df5c7c94849d3cc28f500
     name: mongodb-cluster
     type: application
     urls:
@@ -92,9 +92,9 @@ entries:
   mysql-cluster:
   - apiVersion: v2
     appVersion: 8.0.33
-    created: "2024-02-25T19:26:00.922437339+02:00"
+    created: "2024-02-25T19:56:04.544390888+02:00"
     description: Creates a mysql cluster with horizontal autoscaling and backups cronjobs
-    digest: 21abfdd1fd85fe17ade1878a79ad73af9fdd3734252f7883e63b0f16acc72772
+    digest: 0c753d0f154408bfcd6ddbc6ad7c932348fc8c60ddfa8c86e95b89a3d0f7822c
     name: mysql-cluster
     type: application
     urls:
@@ -103,9 +103,9 @@ entries:
   network:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2024-02-25T19:26:00.922902307+02:00"
+    created: "2024-02-25T19:56:04.544870987+02:00"
     description: Helps you to configure network policies on namespace
-    digest: b210934f2b27b677907e7c38153154f7e8c3047ea54131efdc4ce109db6d0554
+    digest: 63e9f9a936ef27fc458e098fc7aaa58be934abbbd1c5331a05378a903179e202
     name: network
     type: application
     urls:
@@ -114,10 +114,10 @@ entries:
   postgresql-cluster:
   - apiVersion: v2
     appVersion: "14.7"
-    created: "2024-02-25T19:26:00.924828276+02:00"
+    created: "2024-02-25T19:56:04.549352413+02:00"
     description: Creates a postgresql cluster with horizontal autoscaling and backups
       cronjobs
-    digest: 0380b17ee04faf9108dbc315f0d18fc424770d7cf53717b2b2a47835ef48e748
+    digest: 03316f9d0484c0f88cb9fccb8f2ffae74a3028169189deb8473ca00b416b858a
     name: postgresql-cluster
     type: application
     urls:
@@ -126,12 +126,12 @@ entries:
   repository:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2024-02-25T19:26:00.92525469+02:00"
-    description: Helps you to configure secret
-    digest: 48536cb04aea37407e5f4c5ccc919e8ddcdc97b0755b452d3d5beb0b9093db03
+    created: "2024-02-25T19:56:04.550080772+02:00"
+    description: Helps you to configure image registry on namespace
+    digest: bd0e6c635892c2d64efa435f533def73a39772795128e60baed1538b7a25897a
     name: repository
     type: application
     urls:
     - https://thunderssgss.github.io/helm-repository/repository-3.2.0.tgz
     version: 3.2.0
-generated: "2024-02-25T19:26:00.907579441+02:00"
+generated: "2024-02-25T19:56:04.530787596+02:00"
